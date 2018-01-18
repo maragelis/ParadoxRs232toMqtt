@@ -12,3 +12,4 @@ and one more dummy attribute which is the zone/partition label.
 
 See wiki for more info on Groups and sub groups 
 
+Next step is to send commands to the alarm System Any help is appreciated 
