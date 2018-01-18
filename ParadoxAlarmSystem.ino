@@ -269,11 +269,6 @@ void setup_wifi(){
       delay(5000);
     }
   
-  
-  
-    
-  
-  
     //if you get here you have connected to the WiFi
     trc("connected...yeey :)");
   
