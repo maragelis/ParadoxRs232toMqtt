@@ -12,4 +12,7 @@ and one more dummy attribute which is the zone/partition label.
 
 See wiki for more info on Groups and sub groups 
 
+After flashing the wemos connect to its wifi, (PARADOXController_AP), go to page 192.168.4.1 give it your wifi credentials and MQtt server address. Thats it  
+
+
 Next step is to send commands to the alarm System Any help is appreciated 
