@@ -11,7 +11,7 @@
 
 #define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
-#define Hostname          "433MhzBridge2"
+#define Hostname          "ParadoxBridge"
 
 #define paradoxRX  13
 #define paradoxTX  15
