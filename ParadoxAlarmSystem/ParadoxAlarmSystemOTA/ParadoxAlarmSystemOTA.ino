@@ -21,10 +21,10 @@
 
 #define TRACE 0
 
-
-const char* root_topicOut = "/home/PARADOXt/out";
-const char* root_topicStatus = "/home/PARADOXt/status";
-const char* root_topicIn = "/home/PARADOXt/in";
+bool gotDATA = false;
+const char* root_topicOut = "/home/PARADOX/out";
+const char* root_topicStatus = "/home/PARADOX/status";
+const char* root_topicIn = "/home/PARADOX/in";
 
 
 
@@ -53,14 +53,11 @@ typedef struct {
   
  Payload paradox;
 
- 
+     
 
 void setup() {
-   pinMode(LED_BUILTIN,OUTPUT);
-    
-     //paradoxSerial.begin(9600);
-     trc("debug monitor is up");
-     
+   pinMode(LED,OUTPUT);
+       
     Serial.begin(9600);
     Serial.flush(); // Clean up the serial buffer in case previous junk is there
    trc("Paradox serial monitor is up");
@@ -69,25 +66,27 @@ void setup() {
   mountfs();
 
   setup_wifi();
+  
+  ArduinoOTA.onEnd([]() {
+        ESP.reset();
+        });
   ArduinoOTA.setHostname("ParadoxControllerV1");
   ArduinoOTA.begin();
   trc("Finnished wifi setup");
   delay(1500);
   lastReconnectAttempt = 0;
   wifi_station_set_hostname("ParadoxControllerV1");  
-  sendMQTT(root_topicStatus,"ParadoxController V1.1");
+  sendMQTT(root_topicStatus,"ParadoxController V1.3");
+   Serial.flush();
+   serial_flush_buffer();
 }
 
 void loop() {
    
-
-    ArduinoOTA.handle();
-    QuickMqttReconect();
-
-  // put your main code here, to run repeatedly:
    readSerial();
         
-    if ( (inData[0] & 0xF0)==0xE0){ // Does it look like a valid packet?
+    if (gotDATA && (inData[0] & 0xF0)==0xE0){ // Does it look like a valid packet?
+       
     //paradox.armstatus=inData[0];
     //paradox.event=inData[7];
     //paradox.sub_event=inData[8]; 
@@ -100,16 +99,17 @@ void loop() {
 
     SendJsonString(inData[0],inData[7],inData[8],zlabel);
    
+    gotDATA=false;
     
     
-    
-  }else //re-align buffer
+  }else if (gotDATA)//re-align buffer
   {
     blink(200);
     serial_flush_buffer();
   }
  
-
+    ArduinoOTA.handle();
+    QuickMqttReconect();
 }
 
 void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
@@ -117,7 +117,7 @@ void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
   String retval = "{ \"armstatus\":" + String(armstatus) + ", \"event\":" + String(event) + ", \"sub_event\":" + String(sub_event) + ", \"dummy\":\"" + String(dummy) + "\"}";
   sendMQTT(root_topicOut,retval); 
   if (TRACE)
-    Serial.println(retval);  
+   trc(retval);  
 }
 
 void QuickMqttReconect()
@@ -153,8 +153,10 @@ void sendMQTT(String topicNameSend, String dataStr){
 
 }
 void readSerial() {
-     if (Serial.available()>36  )  
+     
+     if (Serial.available()>=37  )  
      { 
+        gotDATA=true;
         pindex=0; 
         while(pindex < 37) // Paradox packet is 37 bytes 
         {
@@ -242,8 +244,7 @@ void setup_wifi(){
       //end save
     }
   
-    trc("local ip : ");
-    trc((String)WiFi.localIP());
+   
   
     
     trc("Setting Mqtt Server values");
@@ -258,10 +259,7 @@ void setup_wifi(){
     client.setCallback(callback);
     reconnect();
     
-    trc("WiFi connected");
-    trc("IP address: ");
-    
-   trc((String)WiFi.localIP());
+  
   
 }
 
@@ -359,8 +357,8 @@ void mountfs(){
 void trc(String msg){
   if (TRACE) {
   //paradoxSerial.println(msg);
-   Serial.println(msg);
-  //sendMQTT(root_topicStatus,msg);
+   //Serial.println(msg);
+  
   }
 }
  
