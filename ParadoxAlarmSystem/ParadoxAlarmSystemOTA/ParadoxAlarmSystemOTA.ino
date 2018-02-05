@@ -19,12 +19,21 @@
 #define paradoxRX  13
 #define paradoxTX  15
 
+#define Stay_Arm  0x01
+#define Stay_Arm2 0x02
+#define Sleep_Arm 0x03
+#define Full_Arm 0x04
+#define Disarm  0x05
+
+#define PanelPcPassword 1245
+
+#define MessageLength 37
+
 #define TRACE 0
 
-
-const char* root_topicOut = "/home/PARADOX/out";
-const char* root_topicStatus = "/home/PARADOX/status";
-const char* root_topicIn = "/home/PARADOX/in";
+const char *root_topicOut = "/home/PARADOX4000/out";
+const char* root_topicStatus = "/home/PARADOX4000/status";
+const char* root_topicIn = "/home/PARADOX4000/in";
 
 
 
@@ -77,14 +86,15 @@ void setup() {
   mountfs();
 
   setup_wifi();
-  ArduinoOTA.setHostname("ParadoxControllerV1");
+  ArduinoOTA.setHostname("ParadoxControllerV2");
   ArduinoOTA.begin();
   trc("Finnished wifi setup");
   delay(1500);
   lastReconnectAttempt = 0;
-  wifi_station_set_hostname("ParadoxControllerV1");  
+  wifi_station_set_hostname("ParadoxControllerV2");  
   
-  sendMQTT(root_topicStatus,"ParadoxController V1.1");
+  sendMQTT(root_topicStatus,"ParadoxController V2");
+  
 }
 
 void loop() {
@@ -200,10 +210,266 @@ void callback(char* topic, byte* payload, unsigned int length) {
   payload[length] = '\0';
   
   trc("JSON Returned! ====");
- 
+  String callbackstring = String((char *)payload);
+
+  doLogin();
+  if (callbackstring == "0")
+  {
+    
+    ControlPannel(Stay_Arm);
+    
+  }
+  else if (callbackstring == "1")
+  {
+    
+  ControlPannel(Full_Arm);
   
- 
+  }
+  else if (callbackstring == "2")
+  {
+    
+    ControlPannel(Sleep_Arm);
+    
+  }
+  else if (callbackstring == "3")
+  {
+    
+    ControlPannel(Disarm);
+    
+  }
+
+  else if (callbackstring == "setdate")
+  {
+
+    panelSetDate();
+  }
+  else
+  {
+
+    PanelDisconnect();
+  }
 }
+
+
+void panelSetDate()
+{
+  byte data[MessageLength] = {};
+  byte checksum;
+  for (int x = 0; x < MessageLength; x++)
+  {
+    data[x] = 0x00;
+  }
+
+  data[0] = 0x30;
+  data[4] = 0x21;
+  data[5] = 0x18;
+  data[6] = 0x02;
+  data[7] = 0x06;
+  data[8] = 0x01;
+  data[9] = 0x22;
+  data[33] = 0x01;
+
+  checksum = 0;
+  for (int x = 0; x < MessageLength - 1; x++)
+  {
+    checksum += data[x];
+  }
+
+  while (checksum > 255)
+  {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  data[36] = checksum & 0xFF;
+
+  Serial.write(data, MessageLength);
+}
+
+
+
+void ControlPannel(byte ArmState)
+{
+  byte armdata[MessageLength] = {};
+  byte checksum;
+  for (int x = 0; x < MessageLength; x++)
+  {
+    armdata[x] = 0x00;
+  }
+
+  armdata[0] = 0x40;
+  armdata[2] = ArmState;
+  armdata[3] = 0x00;
+  armdata[33] = 0x01;
+  armdata[34] = 0x00;
+  armdata[35] = 0x00;
+  checksum = 0;
+  for (int x = 0; x < MessageLength - 1; x++)
+  {
+    checksum += armdata[x];
+  }
+
+  while (checksum > 255)
+  {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  armdata[36] = checksum & 0xFF;
+
+  Serial.write(armdata, MessageLength);
+  readSerial();
+
+  if (TRACE)
+  {
+    for (int x = 0; x < MessageLength; x++)
+    {
+      paradoxSerial.print("replAddress-");
+      paradoxSerial.print(x);
+      paradoxSerial.print("=");
+      paradoxSerial.println(inData[x], HEX);
+    }
+  }
+
+}
+
+void PanelDisconnect()
+{
+  byte data[MessageLength] = {};
+  byte checksum;
+  for (int x = 0; x < MessageLength; x++)
+  {
+    data[x] = 0x00;
+  }
+
+  data[0] = 0x70;
+  data[2] = 0x05;
+  data[33] = 0x01;
+
+  checksum = 0;
+  for (int x = 0; x < MessageLength - 1; x++)
+  {
+    checksum += data[x];
+  }
+
+  while (checksum > 255)
+  {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  data[36] = checksum & 0xFF;
+
+  Serial.write(data, MessageLength);
+  readSerial();
+
+  if (TRACE)
+  {
+    for (int x = 0; x < MessageLength; x++)
+    {
+      paradoxSerial.print("replAddress-");
+      paradoxSerial.print(x);
+      paradoxSerial.print("=");
+      paradoxSerial.println(inData[x], HEX);
+    }
+  }
+}
+
+void doLogin()
+{
+
+
+  byte data[MessageLength] = {};
+  byte data1[MessageLength] = {};
+  byte checksum;
+
+  for (int x = 0; x < MessageLength; x++)
+  {
+      data[x]=0x00;
+      data1[x]=0x00;
+  }
+
+    serial_flush_buffer();
+  data[0] = 0x5f;
+  data[1] = 0x20;
+  data[33] = 0x01;
+  data[34] = 0x00;
+  data[35] = 0x00;
+  data[33] = 0x01;
+
+  checksum = 0;
+  for (int x = 0; x < MessageLength - 1; x++)
+  {
+    checksum += data[x];
+  }
+
+  while (checksum > 255)
+  {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  data[36] = checksum & 0xFF;
+
+  if (TRACE)
+  {
+    for (int x = 0; x < MessageLength; x++)
+    {
+      paradoxSerial.print("Address-");
+      paradoxSerial.print(x);
+      paradoxSerial.print("=");
+      paradoxSerial.println(data[x], HEX);
+    }
+  }
+    Serial.write(data, MessageLength);
+    readSerial();
+    if (TRACE)
+    {
+      for (int x = 0; x < MessageLength; x++)
+      {
+        paradoxSerial.print("replAddress-");
+        paradoxSerial.print(x);
+        paradoxSerial.print("=");
+        paradoxSerial.println(inData[x], HEX);
+      }
+    }
+      data1[0] = 0x00;
+      data1[4] = inData[4];
+      data1[5] = inData[5];
+      data1[6] = inData[6];
+      data1[7] = inData[7];
+      data1[7] = inData[8];
+      data1[9] = inData[9];
+      data1[10] = 0x12; //panel pc password digit 1 & 2
+      data1[11] = 0x45; //panel pc password digit 3 & 4
+      data1[33] = 0x01;
+
+      checksum = 0;
+      for (int x = 0; x < MessageLength - 1; x++)
+      {
+        checksum += data1[x];
+      }
+      while (checksum > 255)
+      {
+        checksum = checksum - (checksum / 256) * 256;
+      }
+
+      data1[36] = checksum & 0xFF;
+      Serial.write(data1, MessageLength);
+      readSerial();
+      if (TRACE)
+      {
+        for (int x = 0; x < MessageLength; x++)
+        {
+          paradoxSerial.print("lastAddress-");
+          paradoxSerial.print(x);
+          paradoxSerial.print("=");
+          paradoxSerial.println(inData[x], HEX);
+        }
+      }
+        if (inData[0] < 20)
+        {
+          //Console.WriteLine("Succsess");
+          sendMQTT(root_topicStatus, "login Success");
+        }
+}
+
 
 
 void serial_flush_buffer()
@@ -407,7 +673,7 @@ void mountfs(){
 void trc(String msg){
   if (TRACE) {
   paradoxSerial.println(msg);
-  sendMQTT(root_topicStatus,msg);
+ // sendMQTT(root_topicStatus,msg);
   }
 }
  
