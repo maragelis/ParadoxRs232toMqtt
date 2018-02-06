@@ -27,6 +27,8 @@
 
 #define MessageLength 37
 
+#define LED LED_BUILTIN
+
 #define TRACE 0
 
 const char *root_topicOut = "/home/PARADOX4000/out";
@@ -45,14 +47,12 @@ bool ResetConfig = false;
 
 long lastReconnectAttempt = 0;
 
-#define RETRY_PERIOD 250    // How soon to retry (in ms) if ACK didn't come in
-#define RETRY_LIMIT 5     // Maximum number of times to retry
-#define ACK_TIME 25       // Number of milliseconds to wait for an ack
+
  
 char inData[38]; // Allocate some space for the string
 byte pindex = 0; // Index into array; where to store the character
  
-#define LED LED_BUILTIN
+
 
 struct inPayload
 {
