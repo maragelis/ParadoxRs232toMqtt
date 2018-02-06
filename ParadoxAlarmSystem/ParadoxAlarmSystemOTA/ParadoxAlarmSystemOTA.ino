@@ -25,8 +25,6 @@
 #define Full_Arm 0x04
 #define Disarm  0x05
 
-#define PanelPcPassword 1245
-
 #define MessageLength 37
 
 #define TRACE 0
@@ -55,7 +53,13 @@ char inData[38]; // Allocate some space for the string
 byte pindex = 0; // Index into array; where to store the character
  
 #define LED LED_BUILTIN
- 
+
+struct inPayload
+{
+  char *PcPasswordFirst2Digits;
+  char *PcPasswordSecond2Digits;
+  String Command;
+ } ;
  
 typedef struct {
      byte armstatus;
@@ -103,28 +107,12 @@ void loop() {
   // put your main code here, to run repeatedly:
    readSerial();
         
-    if ( (inData[0] & 0xF0)==0xE0){ // Does it look like a valid packet?
-    paradox.armstatus=inData[0];
-    paradox.event=inData[7];
-    paradox.sub_event=inData[8]; 
-   String zlabel=String(inData[15]) + String(inData[16]) + String(inData[17])+ String(inData[18])+ String(inData[19])
-   + String(inData[20])+ String(inData[21])+ String(inData[22])+ String(inData[23])
-   + String(inData[24])+ String(inData[25])+ String(inData[26])+ String(inData[27])
-   + String(inData[28])+ String(inData[29])+ String(inData[30]) ; 
-   paradox.dummy=zlabel;
-
-
-    SendJsonString(paradox.armstatus,paradox.event,paradox.sub_event,paradox.dummy);
-   
-    // Send data via RF  
+   if ( (inData[0] & 0xF0)!=0xE0){ // Does it look like a valid packet?
     
-    
-  }else //re-align buffer
-  {
     blink(200);
     serial_flush_buffer();
   }
- 
+  
 
 }
 
@@ -183,8 +171,18 @@ void readSerial() {
         }
        
             inData[++pindex]=0x00; // Make it print-friendly
-      
-    
+
+            if ((inData[0] & 0xF0) == 0xE0)
+            { // Does it look like a valid packet?
+              paradox.armstatus = inData[0];
+              paradox.event = inData[7];
+              paradox.sub_event = inData[8];
+              String zlabel = String(inData[15]) + String(inData[16]) + String(inData[17]) + String(inData[18]) + String(inData[19]) + String(inData[20]) + String(inData[21]) + String(inData[22]) + String(inData[23]) + String(inData[24]) + String(inData[25]) + String(inData[26]) + String(inData[27]) + String(inData[28]) + String(inData[29]) + String(inData[30]);
+              paradox.dummy = zlabel;
+
+              SendJsonString(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
+            }
+            
      }
  
 }
@@ -211,43 +209,44 @@ void callback(char* topic, byte* payload, unsigned int length) {
   
   trc("JSON Returned! ====");
   String callbackstring = String((char *)payload);
+  inPayload data = Decodejson((char *)payload);
 
-  doLogin();
-  if (callbackstring == "0")
+  doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
+
+  if (data.Command == "stay" || data.Command == "Stay" || data.Command == "STAY" || data.Command=="0")
   {
     
     ControlPannel(Stay_Arm);
     
   }
-  else if (callbackstring == "1")
-  {
-    
-  ControlPannel(Full_Arm);
-  
+  else if (data.Command == "arm" || data.Command == "Arm" || data.Command == "ARM" || data.Command=="1")
+  {    
+    ControlPannel(Full_Arm);
   }
-  else if (callbackstring == "2")
+  else if (data.Command == "sleep" || data.Command == "Sleep" || data.Command == "SLEEP" || data.Command=="2")
   {
     
     ControlPannel(Sleep_Arm);
     
   }
-  else if (callbackstring == "3")
+  else if (data.Command == "disarm" || data.Command == "Disarm" || data.Command == "DISARM" || data.Command == "3")
   {
     
     ControlPannel(Disarm);
     
   }
 
-  else if (callbackstring == "setdate")
+  else if (data.Command == "setdate")
   {
 
     panelSetDate();
   }
-  else
+  else if (data.Command == "disconnect" || data.Command == "Disconnect" || data.Command == "DISCONNECT" || data.Command == "99")
   {
 
     PanelDisconnect();
   }
+  
 }
 
 
@@ -314,7 +313,16 @@ void ControlPannel(byte ArmState)
   }
 
   armdata[36] = checksum & 0xFF;
-
+  if (TRACE)
+  {
+    for (int x = 0; x < MessageLength; x++)
+    {
+      paradoxSerial.print("ARMAddress-");
+      paradoxSerial.print(x);
+      paradoxSerial.print("=");
+      paradoxSerial.println(inData[x], HEX);
+    }
+  }
   Serial.write(armdata, MessageLength);
   readSerial();
 
@@ -372,10 +380,22 @@ void PanelDisconnect()
   }
 }
 
-void doLogin()
+void doLogin(char *pass1, char* pass2)
 {
 
+trc(pass1);
+trc(pass2);
 
+  byte PanelPassword1;
+  byte PanelPassword2;
+
+  unsigned long number1 = strtoul(pass1, nullptr, 16);
+  unsigned long number2 = strtoul(pass2, nullptr, 16);
+
+  PanelPassword1 = number1 & 0xFF; 
+  PanelPassword2 = number2 & 0xFF; 
+
+  
   byte data[MessageLength] = {};
   byte data1[MessageLength] = {};
   byte checksum;
@@ -436,8 +456,8 @@ void doLogin()
       data1[7] = inData[7];
       data1[7] = inData[8];
       data1[9] = inData[9];
-      data1[10] = 0x12; //panel pc password digit 1 & 2
-      data1[11] = 0x45; //panel pc password digit 3 & 4
+      data1[10] = PanelPassword1; //panel pc password digit 1 & 2
+      data1[11] = PanelPassword2; //panel pc password digit 3 & 4
       data1[33] = 0x01;
 
       checksum = 0;
@@ -451,6 +471,18 @@ void doLogin()
       }
 
       data1[36] = checksum & 0xFF;
+
+      if (TRACE)
+      {
+        for (int x = 0; x < MessageLength; x++)
+        {
+          paradoxSerial.print("SendinGINITAddress-");
+          paradoxSerial.print(x);
+          paradoxSerial.print("=");
+          paradoxSerial.println(data1[x], HEX);
+        }
+      }
+
       Serial.write(data1, MessageLength);
       readSerial();
       if (TRACE)
@@ -470,7 +502,48 @@ void doLogin()
         }
 }
 
+struct inPayload Decodejson(char *Payload)
+{
+  inPayload indata;
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject &root = jsonBuffer.parseObject(Payload);
+  if (!root.success())
+  {
+    indata = {"", "",""};
+    Serial.println("JSON parsing failed!");
+    return indata;
+  }
+  else
+  {
+    char charpass1[4];
+    char charpass2[4];
+    
+    String password = root["password"];
+    String command = root["Command"];
 
+    String pass1 = password.substring(0, 2);
+    String pass2 = password.substring(2, 4);
+
+    trc(pass1);
+    trc(pass2);
+
+    pass1.toCharArray(charpass1, 4);
+    pass2.toCharArray(charpass2, 4);
+    
+        
+        trc(password);
+        trc(command);
+
+        trc(charpass1);
+        trc(charpass2);
+        
+
+        inPayload data1 = {charpass1, charpass2, command};
+        return data1;
+  }
+
+  return indata;
+}
 
 void serial_flush_buffer()
 {
