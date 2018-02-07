@@ -33,9 +33,9 @@
 #define TRACE 0
 
 
-const char *root_topicOut = "/home/PARADOX4000/out";
-const char* root_topicStatus = "/home/PARADOX4000/status";
-const char* root_topicIn = "/home/PARADOX4000/in";
+const char *root_topicOut = "/home/PARADOX/out";
+const char* root_topicStatus = "/home/PARADOX/status";
+const char* root_topicIn = "/home/PARADOX/in";
 
 
 
@@ -47,6 +47,7 @@ SoftwareSerial paradoxSerial(paradoxRX, paradoxTX);
 bool shouldSaveConfig = false;
 bool ResetConfig = false;
 bool PannelConnected =false;
+bool PanelError = false;
 
 long lastReconnectAttempt = 0;
 
@@ -101,17 +102,15 @@ void setup() {
   lastReconnectAttempt = 0;
   wifi_station_set_hostname("ParadoxControllerV2");  
   
-  sendMQTT(root_topicStatus,"ParadoxController V2");
+  sendMQTT(root_topicStatus,"ParadoxController V2.11");
   
 }
 
 void loop() {
-   
   
-  // put your main code here, to run repeatedly:
    readSerial();
         
-   if ( (inData[0] & 0xF0)!=0xE0){ // Does it look like a valid packet?
+   if ( (inData[0] & 0xF0)!=0xE0){ // re-align serial buffer
     
     blink(200);
     serial_flush_buffer();
@@ -124,8 +123,7 @@ void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
 {
   String retval = "{ \"armstatus\":" + String(armstatus) + ", \"event\":" + String(event) + ", \"sub_event\":" + String(sub_event) + ", \"dummy\":\"" + String(dummy) + "\"}";
   sendMQTT(root_topicOut,retval); 
-  if (TRACE)
-    Serial.println(retval);  
+   
 }
 
 void sendMQTT(String topicNameSend, String dataStr){
@@ -170,30 +168,34 @@ void readSerial() {
         
         while(pindex < 37) // Paradox packet is 37 bytes 
         {
-            inData[pindex++]=Serial.read();
-            
+            inData[pindex++]=Serial.read();            
         }
        
             inData[++pindex]=0x00; // Make it print-friendly
+           
+              if ((inData[0] & 0xF0) == 0xE0)
+              { // Does it look like a valid packet?
+                paradox.armstatus = inData[0];
+                paradox.event = inData[7];
+                paradox.sub_event = inData[8];
+                String zlabel = String(inData[15]) + String(inData[16]) + String(inData[17]) + String(inData[18]) + String(inData[19]) + String(inData[20]) + String(inData[21]) + String(inData[22]) + String(inData[23]) + String(inData[24]) + String(inData[25]) + String(inData[26]) + String(inData[27]) + String(inData[28]) + String(inData[29]) + String(inData[30]);
+                paradox.dummy = zlabel;
 
-            if ((inData[0] & 0xF0) == 0xE0)
-            { // Does it look like a valid packet?
-              paradox.armstatus = inData[0];
-              paradox.event = inData[7];
-              paradox.sub_event = inData[8];
-              String zlabel = String(inData[15]) + String(inData[16]) + String(inData[17]) + String(inData[18]) + String(inData[19]) + String(inData[20]) + String(inData[21]) + String(inData[22]) + String(inData[23]) + String(inData[24]) + String(inData[25]) + String(inData[26]) + String(inData[27]) + String(inData[28]) + String(inData[29]) + String(inData[30]);
-              paradox.dummy = zlabel;
-
-              SendJsonString(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
-              if (inData[7]==48 && inData[8]==3)
-              {
-                PannelConnected=false;
+                SendJsonString(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
+                if (inData[7] == 48 && inData[8] == 3)
+                {
+                  PannelConnected = false;
+                 // trc("panel logout");
+                   sendMQTT(root_topicStatus, "panel logout");
+                }
+                if (inData[7] == 48 && inData[8] == 2 && !PannelConnected)
+                {
+                  PannelConnected = true;
+                  //trc("panel Login");
+                     sendMQTT(root_topicStatus, "panel Login");
+                }
               }
-
-            }
-            
      }
- 
 }
 
 void blink(int duration) {
@@ -219,14 +221,26 @@ void callback(char* topic, byte* payload, unsigned int length) {
   trc("JSON Returned! ====");
   String callbackstring = String((char *)payload);
   inPayload data = Decodejson((char *)payload);
+  PanelError= false;
+  
+  doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
 
+  int cnt = 0;
+  while (!PannelConnected && cnt < 10)
+  {
+    readSerial();
+    cnt++;    
+  }
+  
   if (!PannelConnected)
   {
-    doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
-  }
-  if (data.Command!=0x00)
-  {
-   ControlPanel(data);
+    trc("Problem connecting to panel");
+    sendMQTT(root_topicStatus, "Problem connecting to panel");
+  } else if (data.Command != 0x00 && PannelConnected )  {
+      ControlPanel(data);
+  }else  {
+    trc("Bad Command ");
+    sendMQTT(root_topicStatus, "Bad Command ");
   }
   
   
@@ -341,29 +355,24 @@ void ControlPanel(inPayload data){
   }
 
   armdata[36] = checksum & 0xFF;
-  if (TRACE)
+  
+  
+  while (Serial.available()>37)
   {
-    for (int x = 0; x < MessageLength; x++)
-    {
-      paradoxSerial.print("ARMAddress-");
-      paradoxSerial.print(x);
-      paradoxSerial.print("=");
-      paradoxSerial.println(inData[x], HEX);
-    }
+    trc("serial cleanup");
+    readSerial();
   }
+
+  trc("sending Data");
   Serial.write(armdata, MessageLength);
   readSerial();
 
-  if (TRACE)
+  if ( inData[0]  >= 40 && inData[0] <= 45)
   {
-    for (int x = 0; x < MessageLength; x++)
-    {
-      paradoxSerial.print("replAddress-");
-      paradoxSerial.print(x);
-      paradoxSerial.print("=");
-      paradoxSerial.println(inData[x], HEX);
+    sendMQTT(root_topicStatus, "Command success ");
+    trc(" Command success ");
     }
-  }
+  
 
 }
 
@@ -395,16 +404,7 @@ void PanelDisconnect(){
   Serial.write(data, MessageLength);
   readSerial();
 
-  if (TRACE)
-  {
-    for (int x = 0; x < MessageLength; x++)
-    {
-      paradoxSerial.print("replAddress-");
-      paradoxSerial.print(x);
-      paradoxSerial.print("=");
-      paradoxSerial.println(inData[x], HEX);
-    }
-  }
+  
 }
 
 void doLogin(byte pass1, byte pass2){
@@ -441,25 +441,25 @@ void doLogin(byte pass1, byte pass2){
 
   if (TRACE)
   {
-    for (int x = 0; x < MessageLength; x++)
-    {
-      paradoxSerial.print("Address-");
-      paradoxSerial.print(x);
-      paradoxSerial.print("=");
-      paradoxSerial.println(data[x], HEX);
-    }
+    // for (int x = 0; x < MessageLength; x++)
+    // {
+    //   paradoxSerial.print("Address-");
+    //   paradoxSerial.print(x);
+    //   paradoxSerial.print("=");
+    //   paradoxSerial.println(data[x], HEX);
+    // }
   }
     Serial.write(data, MessageLength);
     readSerial();
     if (TRACE)
     {
-      for (int x = 0; x < MessageLength; x++)
-      {
-        paradoxSerial.print("replAddress-");
-        paradoxSerial.print(x);
-        paradoxSerial.print("=");
-        paradoxSerial.println(inData[x], HEX);
-      }
+      // for (int x = 0; x < MessageLength; x++)
+      // {
+      //   paradoxSerial.print("replAddress-");
+      //   paradoxSerial.print(x);
+      //   paradoxSerial.print("=");
+      //   paradoxSerial.println(inData[x], HEX);
+      // }
     }
       data1[0] = 0x00;
       data1[4] = inData[4];
@@ -486,37 +486,29 @@ void doLogin(byte pass1, byte pass2){
 
       if (TRACE)
       {
-        for (int x = 0; x < MessageLength; x++)
-        {
-          paradoxSerial.print("SendinGINITAddress-");
-          paradoxSerial.print(x);
-          paradoxSerial.print("=");
-          paradoxSerial.println(data1[x], HEX);
-        }
+        // for (int x = 0; x < MessageLength; x++)
+        // {
+        //   paradoxSerial.print("SendinGINITAddress-");
+        //   paradoxSerial.print(x);
+        //   paradoxSerial.print("=");
+        //   paradoxSerial.println(data1[x], HEX);
+        // }
       }
 
       Serial.write(data1, MessageLength);
       readSerial();
       if (TRACE)
       {
-        for (int x = 0; x < MessageLength; x++)
-        {
-          paradoxSerial.print("lastAddress-");
-          paradoxSerial.print(x);
-          paradoxSerial.print("=");
-          paradoxSerial.println(inData[x], HEX);
-        }
+        // for (int x = 0; x < MessageLength; x++)
+        // {
+        //   paradoxSerial.print("lastAddress-");
+        //   paradoxSerial.print(x);
+        //   paradoxSerial.print("=");
+        //   paradoxSerial.println(inData[x], HEX);
+        // }
       }
-        if (inData[0] < 20)
-        {
-          //Console.WriteLine("Succsess");
-          PannelConnected=true;
-          sendMQTT(root_topicStatus, "login Success");
-        }
-        else
-        {
-          sendMQTT(root_topicStatus, "login fail");
-        }
+        
+        
 }
 
 struct inPayload Decodejson(char *Payload){
@@ -526,7 +518,7 @@ struct inPayload Decodejson(char *Payload){
   if (!root.success())
   {
     indata = {0x00,0x00,0x00,0x00};
-    Serial.println("JSON parsing failed!");
+    trc("JSON parsing failed!");
     return indata;
   }
   else
