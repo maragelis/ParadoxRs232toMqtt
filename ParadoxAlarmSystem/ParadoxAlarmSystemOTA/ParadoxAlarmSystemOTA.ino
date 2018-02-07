@@ -24,12 +24,14 @@
 #define Sleep_Arm 0x03
 #define Full_Arm 0x04
 #define Disarm  0x05
+#define Bypass 0x10
 
 #define MessageLength 37
 
 #define LED LED_BUILTIN
 
 #define TRACE 0
+
 
 const char *root_topicOut = "/home/PARADOX4000/out";
 const char* root_topicStatus = "/home/PARADOX4000/status";
@@ -44,6 +46,7 @@ SoftwareSerial paradoxSerial(paradoxRX, paradoxTX);
 
 bool shouldSaveConfig = false;
 bool ResetConfig = false;
+bool PannelConnected =false;
 
 long lastReconnectAttempt = 0;
 
@@ -56,9 +59,10 @@ byte pindex = 0; // Index into array; where to store the character
 
 struct inPayload
 {
-  char *PcPasswordFirst2Digits;
-  char *PcPasswordSecond2Digits;
-  String Command;
+  byte PcPasswordFirst2Digits;
+  byte PcPasswordSecond2Digits;
+  byte Command;
+  byte Subcommand;
  } ;
  
 typedef struct {
@@ -181,6 +185,11 @@ void readSerial() {
               paradox.dummy = zlabel;
 
               SendJsonString(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
+              if (inData[7]==48 && inData[8]==3)
+              {
+                PannelConnected=false;
+              }
+
             }
             
      }
@@ -211,47 +220,67 @@ void callback(char* topic, byte* payload, unsigned int length) {
   String callbackstring = String((char *)payload);
   inPayload data = Decodejson((char *)payload);
 
-  doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
-
-  if (data.Command == "stay" || data.Command == "Stay" || data.Command == "STAY" || data.Command=="0")
+  if (!PannelConnected)
   {
-    
-    ControlPannel(Stay_Arm);
-    
+    doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
   }
-  else if (data.Command == "arm" || data.Command == "Arm" || data.Command == "ARM" || data.Command=="1")
-  {    
-    ControlPannel(Full_Arm);
-  }
-  else if (data.Command == "sleep" || data.Command == "Sleep" || data.Command == "SLEEP" || data.Command=="2")
+  if (data.Command!=0x00)
   {
-    
-    ControlPannel(Sleep_Arm);
-    
+   ControlPanel(data);
   }
-  else if (data.Command == "disarm" || data.Command == "Disarm" || data.Command == "DISARM" || data.Command == "3")
-  {
-    
-    ControlPannel(Disarm);
-    
-  }
-
-  else if (data.Command == "setdate")
-  {
-
-    panelSetDate();
-  }
-  else if (data.Command == "disconnect" || data.Command == "Disconnect" || data.Command == "DISCONNECT" || data.Command == "99")
-  {
-
-    PanelDisconnect();
-  }
+  
   
 }
 
 
-void panelSetDate()
-{
+byte getPanelCommand(String data){
+  byte retval=0x00;
+  if (data == "stay" || data == "Stay" || data == "STAY" || data=="0")
+  {
+    
+    retval = Stay_Arm;
+    
+  }
+  else if (data == "arm" || data == "Arm" || data == "ARM" || data=="1")
+  {    
+    retval= Full_Arm;
+  }
+  else if (data == "sleep" || data == "Sleep" || data == "SLEEP" || data=="2")
+  {
+    
+    retval= Sleep_Arm;
+    
+  }
+  else if (data == "disarm" || data == "Disarm" || data == "DISARM" || data == "3")
+  {
+    
+    retval=Disarm;
+    
+  }
+
+  else if (data == "bypass" || data == "Bypass" || data == "BYPASS" || data == "10")
+  {
+    
+    retval=Bypass;
+    
+  }
+
+  else if (data == "setdate")
+  {
+    retval=0x00;
+    panelSetDate();
+  }
+  else if (data == "disconnect" || data == "Disconnect" || data == "DISCONNECT" || data == "99")
+  {
+    retval=0x00;
+    PanelDisconnect();
+  }
+
+  return retval;
+}
+
+
+void panelSetDate(){
   byte data[MessageLength] = {};
   byte checksum;
   for (int x = 0; x < MessageLength; x++)
@@ -286,8 +315,7 @@ void panelSetDate()
 
 
 
-void ControlPannel(byte ArmState)
-{
+void ControlPanel(inPayload data){
   byte armdata[MessageLength] = {};
   byte checksum;
   for (int x = 0; x < MessageLength; x++)
@@ -296,8 +324,8 @@ void ControlPannel(byte ArmState)
   }
 
   armdata[0] = 0x40;
-  armdata[2] = ArmState;
-  armdata[3] = 0x00;
+  armdata[2] = data.Command;
+  armdata[3] = data.Subcommand;;
   armdata[33] = 0x01;
   armdata[34] = 0x00;
   armdata[35] = 0x00;
@@ -339,8 +367,7 @@ void ControlPannel(byte ArmState)
 
 }
 
-void PanelDisconnect()
-{
+void PanelDisconnect(){
   byte data[MessageLength] = {};
   byte checksum;
   for (int x = 0; x < MessageLength; x++)
@@ -380,22 +407,7 @@ void PanelDisconnect()
   }
 }
 
-void doLogin(char *pass1, char* pass2)
-{
-
-trc(pass1);
-trc(pass2);
-
-  byte PanelPassword1;
-  byte PanelPassword2;
-
-  unsigned long number1 = strtoul(pass1, nullptr, 16);
-  unsigned long number2 = strtoul(pass2, nullptr, 16);
-
-  PanelPassword1 = number1 & 0xFF; 
-  PanelPassword2 = number2 & 0xFF; 
-
-  
+void doLogin(byte pass1, byte pass2){
   byte data[MessageLength] = {};
   byte data1[MessageLength] = {};
   byte checksum;
@@ -456,8 +468,8 @@ trc(pass2);
       data1[7] = inData[7];
       data1[7] = inData[8];
       data1[9] = inData[9];
-      data1[10] = PanelPassword1; //panel pc password digit 1 & 2
-      data1[11] = PanelPassword2; //panel pc password digit 3 & 4
+      data1[10] = pass1; //panel pc password digit 1 & 2
+      data1[11] = pass2; //panel pc password digit 3 & 4
       data1[33] = 0x01;
 
       checksum = 0;
@@ -498,18 +510,18 @@ trc(pass2);
         if (inData[0] < 20)
         {
           //Console.WriteLine("Succsess");
+          PannelConnected=true;
           sendMQTT(root_topicStatus, "login Success");
         }
 }
 
-struct inPayload Decodejson(char *Payload)
-{
+struct inPayload Decodejson(char *Payload){
   inPayload indata;
   DynamicJsonBuffer jsonBuffer;
   JsonObject &root = jsonBuffer.parseObject(Payload);
   if (!root.success())
   {
-    indata = {"", "",""};
+    indata = {0x00,0x00,0x00,0x00};
     Serial.println("JSON parsing failed!");
     return indata;
   }
@@ -517,9 +529,11 @@ struct inPayload Decodejson(char *Payload)
   {
     char charpass1[4];
     char charpass2[4];
+    char charsubcommand[4];
     
     String password = root["password"];
     String command = root["Command"];
+    String subcommand = root["Subcommand"];
 
     String pass1 = password.substring(0, 2);
     String pass2 = password.substring(2, 4);
@@ -529,6 +543,8 @@ struct inPayload Decodejson(char *Payload)
 
     pass1.toCharArray(charpass1, 4);
     pass2.toCharArray(charpass2, 4);
+    subcommand.toCharArray(charsubcommand,4);
+
     
         
         trc(password);
@@ -536,17 +552,27 @@ struct inPayload Decodejson(char *Payload)
 
         trc(charpass1);
         trc(charpass2);
-        
 
-        inPayload data1 = {charpass1, charpass2, command};
+  unsigned long number1 = strtoul(charpass1, nullptr, 16);
+  unsigned long number2 = strtoul(charpass2, nullptr, 16);
+  unsigned long number3 = strtoul(charsubcommand, nullptr, 16);
+
+  byte PanelPassword1 = number1 & 0xFF; 
+  byte PanelPassword2 = number2 & 0xFF; 
+  byte SubCommand = number3 & 0xFF;
+
+  byte CommandB = getPanelCommand(command) ;
+   
+
+
+        inPayload data1 = {PanelPassword1, PanelPassword2, , SubCommand};
         return data1;
   }
 
   return indata;
 }
 
-void serial_flush_buffer()
-{
+void serial_flush_buffer(){
   while (Serial.read() >= 0)
   ;
 }
