@@ -513,6 +513,10 @@ void doLogin(byte pass1, byte pass2){
           PannelConnected=true;
           sendMQTT(root_topicStatus, "login Success");
         }
+        else
+        {
+          sendMQTT(root_topicStatus, "login fail");
+        }
 }
 
 struct inPayload Decodejson(char *Payload){
@@ -562,11 +566,17 @@ struct inPayload Decodejson(char *Payload){
   byte SubCommand = number3 & 0xFF;
 
   byte CommandB = getPanelCommand(command) ;
-   
 
+    if (TRACE)
+    {
+      paradoxSerial.print("0x");
+      paradoxSerial.println(PanelPassword1, HEX);
+      paradoxSerial.print("0x");
+      paradoxSerial.println(PanelPassword2, HEX);
+    }
+      inPayload data1 = {PanelPassword1, PanelPassword2, CommandB, SubCommand};
 
-        inPayload data1 = {PanelPassword1, PanelPassword2, , SubCommand};
-        return data1;
+      return data1;
   }
 
   return indata;
