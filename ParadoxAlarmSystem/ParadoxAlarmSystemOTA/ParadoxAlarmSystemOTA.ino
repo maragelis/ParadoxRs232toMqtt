@@ -33,9 +33,9 @@
 #define TRACE 0
 
 
-const char *root_topicOut = "/home/PARADOX/out";
-const char* root_topicStatus = "/home/PARADOX/status";
-const char* root_topicIn = "/home/PARADOX/in";
+const char *root_topicOut = "/home/PARADOX4000/out";
+const char* root_topicStatus = "/home/PARADOX4000/status";
+const char* root_topicIn = "/home/PARADOX4000/in";
 
 
 
