@@ -14,5 +14,4 @@ See wiki for more info on Groups and sub groups
 
 After flashing the wemos connect to its wifi, (PARADOXController_AP), go to page 192.168.4.1 give it your wifi credentials and MQtt server address. Thats it  
 
-
 Continue reading wiki ....
