@@ -14,7 +14,7 @@
 
 #define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
-#define Hostname          "ParadoxController"
+#define Hostname          "paradoxtest" //not more than 15 
 
 #define paradoxRX  13
 #define paradoxTX  15
@@ -30,16 +30,11 @@
 
 #define LED LED_BUILTIN
 
-#define TRACE 0
+#define TRACE 1
 
-
-
-
-char *root_topicOut = "/home/ParadoxController/out";
-char* root_topicStatus = "/home/ParadoxController/status";
-char* root_topicIn = "/home/ParadoxController/in";
-
-
+  const char *root_topicOut = "/paradox/out";
+  const char *root_topicStatus = "/paradox/status";
+  const char *root_topicIn = "/paradox/in";
 
 WiFiClient espClient;
 // client parameters
@@ -80,22 +75,23 @@ typedef struct {
  
 
 void setup() {
-   pinMode(LED_BUILTIN,OUTPUT);
-    blink(100);
-    delay(1000);
-     paradoxSerial.begin(9600);
-     trc("serial monitor is up");
 
-    Serial.begin(9600);
-    Serial.flush(); // Clean up the serial buffer in case previous junk is there
-   trc("Paradox serial monitor is up");
-    
-    blink(1000);
-    serial_flush_buffer();
 
-    SetMqttTopics();
 
-     trc("Running MountFs");
+  pinMode(LED_BUILTIN, OUTPUT);
+  blink(100);
+  delay(1000);
+  paradoxSerial.begin(9600);
+  trc("serial monitor is up");
+
+  Serial.begin(9600);
+  Serial.flush(); // Clean up the serial buffer in case previous junk is there
+  trc("Paradox serial monitor is up");
+
+  blink(1000);
+  serial_flush_buffer();
+
+  trc("Running MountFs");
   mountfs();
 
   setup_wifi();
@@ -124,29 +120,6 @@ void loop() {
 }
 
 
-void SetMqttTopics()
-{
-  String topicOut = "/home/HOSTNAME/out";
-  String topicStatus = "/home/HOSTNAME/status";
-  String topicIn = "/home/HOSTNAME/in";
-
-  topicOut.replace("HOSTNAME", Hostname);
-  topicStatus.replace("HOSTNAME", Hostname);
-  topicIn.replace("HOSTNAME", Hostname);
-
-  char buffer[100];
-  topicOut.toCharArray(buffer,100);
-  root_topicOut = buffer;
-
-  char buffer1[100];
-  topicStatus.toCharArray(buffer1,100);
-  root_topicStatus = buffer1;
-
-  char buffer2[100];
-  topicIn.toCharArray(buffer2,100);
-  root_topicIn = buffer2;
-
-}
 
 void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
 {
