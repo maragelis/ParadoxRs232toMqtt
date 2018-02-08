@@ -33,9 +33,11 @@
 #define TRACE 0
 
 
-const char *root_topicOut = "/home/PARADOX4000/out";
-const char* root_topicStatus = "/home/PARADOX4000/status";
-const char* root_topicIn = "/home/PARADOX4000/in";
+
+
+char *root_topicOut = "/home/ParadoxController/out";
+char* root_topicStatus = "/home/ParadoxController/status";
+char* root_topicIn = "/home/ParadoxController/in";
 
 
 
@@ -83,13 +85,15 @@ void setup() {
     delay(1000);
      paradoxSerial.begin(9600);
      trc("serial monitor is up");
-     
+
     Serial.begin(9600);
     Serial.flush(); // Clean up the serial buffer in case previous junk is there
    trc("Paradox serial monitor is up");
     
     blink(1000);
     serial_flush_buffer();
+
+    SetMqttTopics();
 
      trc("Running MountFs");
   mountfs();
@@ -100,7 +104,7 @@ void setup() {
   trc("Finnished wifi setup");
   delay(1500);
   lastReconnectAttempt = 0;
-  wifi_station_set_hostname("ParadoxControllerV2");  
+  wifi_station_set_hostname(Hostname);  
   
   sendMQTT(root_topicStatus,"ParadoxController V2.11");
   
@@ -116,6 +120,31 @@ void loop() {
     serial_flush_buffer();
   }
   
+
+}
+
+
+void SetMqttTopics()
+{
+  String topicOut = "/home/HOSTNAME/out";
+  String topicStatus = "/home/HOSTNAME/status";
+  String topicIn = "/home/HOSTNAME/in";
+
+  topicOut.replace("HOSTNAME", Hostname);
+  topicStatus.replace("HOSTNAME", Hostname);
+  topicIn.replace("HOSTNAME", Hostname);
+
+  char buffer[100];
+  topicOut.toCharArray(buffer,100);
+  root_topicOut = buffer;
+
+  char buffer1[100];
+  topicStatus.toCharArray(buffer1,100);
+  root_topicStatus = buffer1;
+
+  char buffer2[100];
+  topicIn.toCharArray(buffer2,100);
+  root_topicIn = buffer2;
 
 }
 
@@ -701,6 +730,7 @@ boolean reconnect() {
     // Once connected, publish an announcement...
       //client.publish(root_topicOut,"connected");
       trc("connected");
+      sendMQTT(root_topicStatus,"Paradox Connected");
     //Topic subscribed so as to get data
     String topicNameRec = root_topicIn;
     //Subscribing to topic(s)
