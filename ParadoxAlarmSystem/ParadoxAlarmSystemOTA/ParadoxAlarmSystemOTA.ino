@@ -14,7 +14,7 @@
 
 #define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
-#define Hostname          "ParadoxController"
+#define Hostname          "paradoxtest" //not more than 15 
 
 #define paradoxRX  13
 #define paradoxTX  15
@@ -30,14 +30,11 @@
 
 #define LED LED_BUILTIN
 
-#define TRACE 0
+#define TRACE 1
 
-
-const char *root_topicOut = "/home/PARADOX4000/out";
-const char* root_topicStatus = "/home/PARADOX4000/status";
-const char* root_topicIn = "/home/PARADOX4000/in";
-
-
+  const char *root_topicOut = "/paradox/out";
+  const char *root_topicStatus = "/paradox/status";
+  const char *root_topicIn = "/paradox/in";
 
 WiFiClient espClient;
 // client parameters
@@ -92,7 +89,22 @@ void setup() {
     blink(1000);
     serial_flush_buffer();
 
-     trc("Running MountFs");
+
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  blink(100);
+  delay(1000);
+  paradoxSerial.begin(9600);
+  trc("serial monitor is up");
+
+  Serial.begin(9600);
+  Serial.flush(); // Clean up the serial buffer in case previous junk is there
+  trc("Paradox serial monitor is up");
+
+  blink(1000);
+  serial_flush_buffer();
+
+  trc("Running MountFs");
   mountfs();
 
   setup_wifi();
@@ -101,7 +113,7 @@ void setup() {
   trc("Finnished wifi setup");
   delay(1500);
   lastReconnectAttempt = 0;
-  wifi_station_set_hostname("ParadoxControllerV2");  
+  wifi_station_set_hostname(Hostname);  
   
   sendMQTT(root_topicStatus,"ParadoxController V2.11");
   
@@ -119,6 +131,8 @@ void loop() {
   
 
 }
+
+
 
 void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
 {
@@ -702,6 +716,7 @@ boolean reconnect() {
     // Once connected, publish an announcement...
       //client.publish(root_topicOut,"connected");
       trc("connected");
+      sendMQTT(root_topicStatus,"Paradox Connected");
     //Topic subscribed so as to get data
     String topicNameRec = root_topicIn;
     //Subscribing to topic(s)
