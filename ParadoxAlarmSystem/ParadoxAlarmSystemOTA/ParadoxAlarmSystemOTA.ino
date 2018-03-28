@@ -81,6 +81,7 @@ void setup() {
    pinMode(LED_BUILTIN,OUTPUT);
     blink(100);
     delay(1000);
+    WiFi.mode(WIFI_STA);
      paradoxSerial.begin(9600);
      trc("serial monitor is up");
      
