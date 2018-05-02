@@ -32,9 +32,9 @@
 
 #define TRACE 1
 
-  const char *root_topicOut = "PARADOXtest/out";
-  const char *root_topicStatus = "PARADOXtest/status";
-  const char *root_topicIn = "PARADOXtest/in";
+  const char *root_topicOut = "PARADOXdev/out";
+  const char *root_topicStatus = "PARADOXdev/status";
+  const char *root_topicIn = "PARADOXdev/in";
 
 WiFiClient espClient;
 // client parameters
