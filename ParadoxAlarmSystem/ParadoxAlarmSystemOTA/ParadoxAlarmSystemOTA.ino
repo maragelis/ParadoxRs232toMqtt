@@ -14,7 +14,7 @@
 
 #define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
-#define Hostname          "paradoxtest" //not more than 15 
+#define Hostname          "paradox" //not more than 15 
 
 #define paradoxRX  13
 #define paradoxTX  15
@@ -32,9 +32,9 @@
 
 #define TRACE 1
 
-  const char *root_topicOut = "/paradox/out";
-  const char *root_topicStatus = "/paradox/status";
-  const char *root_topicIn = "/paradox/in";
+  const char *root_topicOut = "PARADOXtest/out";
+  const char *root_topicStatus = "PARADOXtest/status";
+  const char *root_topicIn = "PARADOXtest/in";
 
 WiFiClient espClient;
 // client parameters
@@ -46,7 +46,8 @@ bool ResetConfig = false;
 bool PannelConnected =false;
 bool PanelError = false;
 
-long lastReconnectAttempt = 0;
+unsigned long lastReconnectAttempt = 0UL;
+unsigned long ul_Interval = 5000UL;
 
 
  
@@ -143,13 +144,13 @@ void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
 
 void sendMQTT(String topicNameSend, String dataStr){
   if (!client.connected()) {
-    long now = millis();
-    if (now - lastReconnectAttempt > 5000) {
+    unsigned long now = millis();
+    if (now - lastReconnectAttempt > ul_Interval) {
       lastReconnectAttempt = now;
       trc("client mqtt not connected, trying to connect");
       // Attempt to reconnect
       if (reconnect()) {
-        lastReconnectAttempt = 0;
+        lastReconnectAttempt = 0UL;
       }
     }
   } 
