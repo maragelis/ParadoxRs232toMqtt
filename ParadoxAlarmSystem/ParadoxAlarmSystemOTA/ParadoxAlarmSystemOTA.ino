@@ -235,14 +235,14 @@ void readSerial() {
                 if (inData[7] == 48 && inData[8] == 3)
                 {
                   PannelConnected = false;
-                 // trc("panel logout");
-                   sendMQTT(root_topicStatus, "panel logout");
+                  trc("panel logout");
+                   //sendMQTT(root_topicStatus, "panel logout");
                 }
                 if (inData[7] == 48 && inData[8] == 2 && !PannelConnected)
                 {
                   PannelConnected = true;
-                  //trc("panel Login");
-                     sendMQTT(root_topicStatus, "panel Login");
+                  trc("panel Login");
+                     //sendMQTT(root_topicStatus, "panel Login");
                 }
               }
      }
@@ -292,15 +292,20 @@ void callback(char* topic, byte* payload, unsigned int length) {
     trc("Running panel status command");
     if (data.Subcommand==0)
     {
-     PanelStatus0();
+     PanelStatus0(false,0);
     }
     if (data.Subcommand==1)
     {
-     PanelStatus1();
+     PanelStatus1(false);
     }
-  }else if (data.Command == 0x89  )  {
+  }
+  else if (data.Command == 0x91  )  {
     trc("Running Setdate");
-      panelSetDate();
+      ArmState();
+  } 
+   else if (data.Command == 0x92  )  {
+    trc("Running ZoneState");
+      ZoneState(data.Subcommand);
   } 
    else if (data.Command != 0x00  )  {
      trc("Running Command");
@@ -358,6 +363,16 @@ byte getPanelCommand(String data){
   else if (data == "setdate")
   {
     retval=0x89;
+    
+  }
+  else if (data == "armstate")
+  {
+    retval=0x91;
+    
+  }
+   else if (data == "zonestate")
+  {
+    retval=0x92;
     
   }
   else if (data == "disconnect" || data == "Disconnect" || data == "DISCONNECT" || data == "99")
@@ -516,41 +531,18 @@ void PanelDisconnect(){
   
 }
 
-void PanelStatus0()
+void PanelStatus0(bool showonlyZone ,int zone)
 {
-  //Panel Status 0 
-  byte data[MessageLength] = {};
-  byte data1[MessageLength] = {};
-  byte checksum;
-
-  for (int x = 0; x < MessageLength; x++)
-  {
-      data[x]=0x00;
-      //data1[x]=0x00;
-  }
-
+  
+  getdatapackage();
   serial_flush_buffer();
-  data[0] = 0x50;
-  data[1] = 0x00;
-  data[2] = 0x80;
-  data[3] = 0x00;
-  data[33] = 0x01;
-
-  checksum = 0;
-  for (int x = 0; x < MessageLength - 1; x++)
-  {
-    checksum += data[x];
-  }
-
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
-
-  data[36] = checksum & 0xFF;
-
-  paradoxSerial.write(data, MessageLength);
-    readSerial();
+  outData[0] = 0x50;
+  outData[1] = 0x00;
+  outData[2] = 0x80;
+  outData[3] = 0x00;
+  outData[33] = 0x01;
+  SendoutData();
+  readSerial();
 
     bool Timer_Loss = bitRead(inData[4],7);
     bool PowerTrouble  = bitRead(inData[4],1);
@@ -571,8 +563,10 @@ String retval = "{ \"Timer_Loss\":\""  + String(Timer_Loss) + "\"" +
                   ",\"BatteryTrouble\":\"" + String(NoLowBatteryTroubleIndicator) + "\"}";
 
     trc(retval);
+    if (!showonlyZone)
+    {
     sendMQTT(root_topicStatus,retval);
-    
+    }
     String Zonename ="";
     int zcnt = 0;
     for (int i = 19 ; i <= 22;i++)
@@ -585,7 +579,10 @@ String retval = "{ \"Timer_Loss\":\""  + String(Timer_Loss) + "\"" +
         
         retval = "{ \"zonename\":\""+ Zonename +"\" ,\"Flag\":\""+ bitRead(inData[i],j) +"\"}" ;
         trc (retval);
-        sendMQTT(root_topicZoneStatus ,retval);
+        if (zone==0 || zone== zcnt)
+        {
+          sendMQTT(root_topicZoneStatus ,retval);
+        }
        }
 
 
@@ -597,40 +594,28 @@ String retval = "{ \"Timer_Loss\":\""  + String(Timer_Loss) + "\"" +
 
 }
 
-void PanelStatus1()
+void ZoneState(int zone)
 {
-  //Panel Status 0 
-  byte data[MessageLength] = {};
-  byte data1[MessageLength] = {};
-  byte checksum;
+  PanelStatus0(true,zone);
+}
 
-  for (int x = 0; x < MessageLength; x++)
-  {
-      data[x]=0x00;
-      //data1[x]=0x00;
-  }
+void ArmState()
+{
+  PanelStatus1(true);
+}
+
+void PanelStatus1(bool ShowOnlyState)
+{
+  getdatapackage();
 
   serial_flush_buffer();
-  data[0] = 0x50;
-  data[1] = 0x00;
-  data[2] = 0x80;
-  data[3] = 0x01;
-  data[33] = 0x01;
+  outData[0] = 0x50;
+  outData[1] = 0x00;
+  outData[2] = 0x80;
+  outData[3] = 0x01;
+  outData[33] = 0x01;
 
-  checksum = 0;
-  for (int x = 0; x < MessageLength - 1; x++)
-  {
-    checksum += data[x];
-  }
-
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
-
-  data[36] = checksum & 0xFF;
-
-  paradoxSerial.write(data, MessageLength);
+SendoutData();
     readSerial();
 
   bool Fire=bitRead(inData[17],7);
@@ -652,8 +637,10 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
                   ",\"ArmFlg\":\"" + String(ArmFlg) + "\"}";
 
     trc(retval);
+    if (!ShowOnlyState)
+    {
     sendMQTT(root_topicStatus,retval);
-
+    }
     if (StayFlg)
     {
        retval = "{ \"PanelArmStatus\":0,\"description\":\"STAY_ARM\"}" ;
@@ -689,8 +676,10 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
                   ",\"ParamedicAlarm\":\"" + String(ParamedicAlarm) + "\"}";
 
     trc(retval);
+    if (!ShowOnlyState)
+    {
     sendMQTT(root_topicStatus,retval);
-    
+    }
   
 
 }
