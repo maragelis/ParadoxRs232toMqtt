@@ -7,12 +7,14 @@
                 "Users/panagiotis/Documents/Arduino/libraries",
                 "/Users/panagiotis/Documents/Arduino/ParadoxRs232toMqtt/lib",
                 "C:\\Users\\panagiotis\\Documents\\Arduino\\libraries",
-                "C:\\Users\\panagiotis\\git\\ParadoxRs232toMqtt\\ParadoxAlarmSystem\\lib"
+                "C:\\Users\\panagiotis\\git\\ParadoxRs232toMqtt\\ParadoxAlarmSystem\\lib",
+                "/Users/panagiotismaragelis/Library/Arduino15/packages/esp8266/hardware/esp8266/2.3.0/cores/esp8266"
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": false,
                 "path": [
-                    "/Users/panagiotis/Library/Arduino15/packages/esp8266/hardware/esp8266/2.4.0-rc2/cores/esp8266"
+                    "/Users/panagiotis/Library/Arduino15/packages/esp8266/hardware/esp8266/2.4.0-rc2/cores/esp8266",
+                    "/Users/panagiotismaragelis/Library/Arduino15/packages/esp8266/hardware/esp8266/2.3.0/cores/esp8266"
                 ]
             },
             "intelliSenseMode": "clang-x64",
