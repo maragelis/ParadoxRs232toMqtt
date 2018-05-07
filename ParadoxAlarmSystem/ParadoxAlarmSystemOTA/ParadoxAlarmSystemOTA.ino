@@ -153,6 +153,7 @@ void StartSSDP()
 
     Serial.printf("Starting SSDP...\n");
     SSDP.setSchemaURL("description.xml");
+    SSDP.setDeviceType("upnp:rootdevice");
     SSDP.setHTTPPort(80);
     SSDP.setName("Paradox Alarm Controller");
     SSDP.setSerialNumber(WiFi.macAddress());
@@ -577,7 +578,7 @@ String retval = "{ \"Timer_Loss\":\""  + String(Timer_Loss) + "\"" +
          trc("zonename=");
          trc(Zonename);
         
-        retval = "{ \"zonename\":\""+ Zonename +"\" ,\"Flag\":\""+ bitRead(inData[i],j) +"\"}" ;
+        retval = "{ \""+ Zonename +"\" :\""+ bitRead(inData[i],j) +"\"}" ;
         trc (retval);
         if (zone==0 || zone== zcnt)
         {
