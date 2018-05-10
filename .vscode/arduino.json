@@ -1,6 +1,6 @@
 {
-    "board": "esp8266:esp8266:d1_mini",
-    "configuration": "CpuFrequency=80,UploadSpeed=921600,FlashSize=4M3M",
+    "board": "esp8266:esp8266:huzzah",
+    "configuration": "CpuFrequency=80,UploadSpeed=115200,FlashSize=4M3M",
     "sketch": "ParadoxAlarmSystem/ParadoxAlarmSystemOTA/ParadoxAlarmSystemOTA.ino",
-    "port": "COM7"
+    "port": "/dev/cu.SLAB_USBtoUART"
 }
