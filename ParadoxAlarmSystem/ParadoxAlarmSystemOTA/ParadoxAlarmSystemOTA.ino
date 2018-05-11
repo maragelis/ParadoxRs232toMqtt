@@ -16,7 +16,7 @@
 
 #define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
-#define Hostname          "paradoxdev" //not more than 15 
+#define Hostname          "ParadoxDev" //not more than 15 
 
 #define paradoxRX  13
 #define paradoxTX  15
@@ -114,14 +114,14 @@ void setup() {
   StartSSDP();
   
 
-  ArduinoOTA.setHostname("ParadoxControllerV2Dev");
+  ArduinoOTA.setHostname(Hostname);
   ArduinoOTA.begin();
   trc("Finnished wifi setup");
   delay(1500);
   lastReconnectAttempt = 0;
   wifi_station_set_hostname(Hostname);  
   
-  sendMQTT(root_topicStatus,"ParadoxController Vdev");
+  sendMQTT(root_topicStatus,Hostname);
   //PanelStatus0();
 
     
@@ -146,8 +146,12 @@ void StartSSDP()
 
     Serial.printf("Starting HTTP...\n");
     HTTP.on("/index.html", HTTP_GET, []() {
-      HTTP.send(200, "text/plain", "ParadoxController Vdev!");
+      HTTP.send(200, "text/plain", Hostname);
     });
+    HTTP.on("/", HTTP_GET, []() {
+      HTTP.send(200, "text/plain", Hostname);
+    });
+
     HTTP.on("/description.xml", HTTP_GET, []() {
       SSDP.schema(HTTP.client());
     });
@@ -167,7 +171,20 @@ void StartSSDP()
     SSDP.setManufacturerURL("https://github.com/maragelis/");
     SSDP.begin();
 
-    Serial.printf("Ready!\n");
+    if (!MDNS.begin("esp8266")) {
+    trc("Error setting up MDNS responder!");
+    while (1) {
+      delay(1000);
+    }
+  }
+    trc("mDNS responder started");
+
+  
+
+  // Add service to MDNS-SD
+    MDNS.addService("http", "tcp", 80);
+
+    trc("Ready!\n");
   }
 }
 
@@ -594,24 +611,15 @@ String retval = "{ \"Timer_Loss\":\""  + String(Timer_Loss) + "\"" +
      for (int j = 0 ; j < 8;j++) 
        {
          Zonename = "Z" + String(++zcnt);
-         trc("zonename=");
-         trc(Zonename);
-        
+
         retval = "{ \""+ Zonename +"\" :\""+ bitRead(inData[i],j) +"\"}" ;
         trc (retval);
         if ((zone==0 && bitRead(inData[i],j) == 1) || zone== zcnt)
         {
-          sendMQTT(root_topicZoneStatus ,retval);
+           sendMQTT(root_topicZoneStatus ,retval);
         }
        }
-
-
     }
-
-    
-
-  
-
 }
 
 void ZoneState(int zone)
@@ -680,7 +688,12 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
     {
     sendMQTT(root_topicStatus,retval);
     }
-    if (StayFlg)
+
+     if (AlarmFlg)
+    {
+       retval = "{ \"PanelArmStatus\":4,\"description\":\"ALARM_TRIGGERED\"}" ;
+    }
+    else if (StayFlg)
     {
        retval = "{ \"PanelArmStatus\":0,\"description\":\"STAY_ARM\"}" ;
     }else if (SleepFlg)
@@ -695,10 +708,7 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
     {
        retval = "{ \"PanelArmStatus\":3,\"description\":\"DISARMED\"}" ;
     }
-    else if (AlarmFlg)
-    {
-       retval = "{ \"PanelArmStatus\":4,\"description\":\"ALARM_TRIGGERED\"}" ;
-    }
+    
     else
     {
        retval = "{ \"PanelArmStatus\":99,\"description\":\"unknown\"}" ;
@@ -764,9 +774,9 @@ void doLogin(byte pass1, byte pass2){
     //   Serial.println(data[x], HEX);
     // }
   }
-   trc("sending serial");
+   
     paradoxSerial.write(data, MessageLength);
-    trc("end serial send");
+    
     readSerialQuick();
     if (TRACE)
     {
@@ -936,7 +946,7 @@ void setup_wifi(){
     
 
     
-    if (!wifiManager.autoConnect("PARADOXControllerDEV_AP", "")) {
+    if (!wifiManager.autoConnect(Hostname, "")) {
       trc("failed to connect and hit timeout");
       delay(3000);
       //reset and try again, or maybe put it to deep sleep
@@ -975,8 +985,8 @@ void setup_wifi(){
       //end save
     }
   
-    trc("local ip : ");
-    Serial.println(WiFi.localIP());
+    //trc("local ip : ");
+    //Serial.println(WiFi.localIP());
   
     
     trc("Setting Mqtt Server values");
