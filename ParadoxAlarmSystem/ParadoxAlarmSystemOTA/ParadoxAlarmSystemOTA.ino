@@ -50,6 +50,7 @@ bool shouldSaveConfig = false;
 bool ResetConfig = false;
 bool PannelConnected =false;
 bool PanelError = false;
+bool RunningCommand=false;
 
 unsigned long lastReconnectAttempt = 0UL;
 unsigned long ul_Interval = 5000UL;
@@ -252,8 +253,9 @@ void readSerialData() {
                 paradox.event = inData[7];
                 paradox.sub_event = inData[8];
                 String zlabel = String(inData[15]) + String(inData[16]) + String(inData[17]) + String(inData[18]) + String(inData[19]) + String(inData[20]) + String(inData[21]) + String(inData[22]) + String(inData[23]) + String(inData[24]) + String(inData[25]) + String(inData[26]) + String(inData[27]) + String(inData[28]) + String(inData[29]) + String(inData[30]);
+                if (inData[14]!= 1){
                 paradox.dummy = zlabel;
-
+                }
                 SendJsonString(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
                 if (inData[7] == 48 && inData[8] == 3)
                 {
@@ -287,6 +289,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
   // In order to republish this payload, a copy must be made
   // as the orignal payload buffer will be overwritten whilst
   // constructing the PUBLISH packet.
+   if (RunningCommand){
+     trc("Command already Running exiting");
+      return;
+    }
   trc("Hey I got a callback ");
   // Conversion to a printable string
   payload[length] = '\0';
@@ -304,7 +310,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
     readSerial();
     cnt++;    
   }
-  
+   
+
+  RunningCommand=true;
   if (!PannelConnected)
   {
     trc("Problem connecting to panel");
@@ -339,6 +347,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     sendMQTT(root_topicStatus, "Bad Command ");
   }
   
+  RunningCommand=false;
   
 }
 
@@ -408,62 +417,29 @@ byte getPanelCommand(String data){
   return retval;
 }
 
-void getdatapackage()
-{
- // byte data[MessageLength] = {};
-  //byte checksum;
-  for (int x = 0; x < MessageLength; x++)
-  {
-    outData[x] = 0x00;
-  }
-
-  //return data;
-}
 
 
 void panelSetDate(){
-  //byte data[MessageLength] = {};
+  byte data[MessageLength] = {};
   byte checksum;
-  // for (int x = 0; x < MessageLength; x++)
-  // {
-  //   data[x] = 0x00;
-  // }
+   for (int x = 0; x < MessageLength; x++)
+  {
+    data[x] = 0x00;
+  }
 
-  getdatapackage();
+  data[0] = 0x30;
+  data[4] = 0x21;
+  data[5] = 0x18;
+  data[6] = 0x05;
+  data[7] = 0x05;
+  data[8] = 0x13;
+  data[9] = 0x22;
+  data[33] = 0x01;
 
-  outData[0] = 0x30;
-  outData[4] = 0x21;
-  outData[5] = 0x18;
-  outData[6] = 0x05;
-  outData[7] = 0x05;
-  outData[8] = 0x13;
-  outData[9] = 0x22;
-  outData[33] = 0x01;
-
-  // checksum = 0;
-  // for (int x = 0; x < MessageLength - 1; x++)
-  // {
-  //   checksum += data[x];
-  // }
-
-  // while (checksum > 255)
-  // {
-  //   checksum = checksum - (checksum / 256) * 256;
-  // }
-
-  // data[36] = checksum & 0xFF;
-
-  // paradoxSerial.write(data, MessageLength);
-  SendoutData();
-}
-
-void SendoutData()
-{
-  byte checksum;
-  checksum = 0;
+   checksum = 0;
   for (int x = 0; x < MessageLength - 1; x++)
   {
-    checksum += outData[x];
+    checksum += data[x];
   }
 
   while (checksum > 255)
@@ -471,10 +447,12 @@ void SendoutData()
     checksum = checksum - (checksum / 256) * 256;
   }
 
-  outData[36] = checksum & 0xFF;
+  data[36] = checksum & 0xFF;
 
-  paradoxSerial.write(outData, MessageLength);
+  paradoxSerial.write(data, MessageLength);
+  
 }
+
 
 void ControlPanel(inPayload data){
   byte armdata[MessageLength] = {};
@@ -549,23 +527,42 @@ void PanelDisconnect(){
   data[36] = checksum & 0xFF;
 
   paradoxSerial.write(data, MessageLength);
-  readSerial();
+  readSerialQuick();
 
   
 }
 
 void PanelStatus0(bool showonlyZone ,int zone)
 {
-  
-  getdatapackage();
+  byte data[MessageLength] = {};
+  byte checksum;
+  for (int x = 0; x < MessageLength; x++)
+  {
+    data[x] = 0x00;
+  }
+
   serial_flush_buffer();
-  outData[0] = 0x50;
-  outData[1] = 0x00;
-  outData[2] = 0x80;
-  outData[3] = 0x00;
-  outData[33] = 0x01;
-  SendoutData();
-  readSerial();
+  data[0] = 0x50;
+  data[1] = 0x00;
+  data[2] = 0x80;
+  data[3] = 0x00;
+  data[33] = 0x01;
+ checksum = 0;
+  for (int x = 0; x < MessageLength - 1; x++)
+  {
+    checksum += data[x];
+  }
+
+  while (checksum > 255)
+  {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  data[36] = checksum & 0xFF;
+
+  paradoxSerial.write(data, MessageLength);
+  
+  readSerialQuick();
 
     bool Timer_Loss = bitRead(inData[4],7);
     bool PowerTrouble  = bitRead(inData[4],1);
@@ -602,7 +599,7 @@ String retval = "{ \"Timer_Loss\":\""  + String(Timer_Loss) + "\"" +
         
         retval = "{ \""+ Zonename +"\" :\""+ bitRead(inData[i],j) +"\"}" ;
         trc (retval);
-        if (zone==0 || zone== zcnt)
+        if ((zone==0 && bitRead(inData[i],j) == 1) || zone== zcnt)
         {
           sendMQTT(root_topicZoneStatus ,retval);
         }
@@ -629,17 +626,36 @@ void ArmState()
 
 void PanelStatus1(bool ShowOnlyState)
 {
-  getdatapackage();
+  byte data[MessageLength] = {};
+  byte checksum;
+  for (int x = 0; x < MessageLength; x++)
+  {
+    data[x] = 0x00;
+  }
 
   serial_flush_buffer();
-  outData[0] = 0x50;
-  outData[1] = 0x00;
-  outData[2] = 0x80;
-  outData[3] = 0x01;
-  outData[33] = 0x01;
+  data[0] = 0x50;
+  data[1] = 0x00;
+  data[2] = 0x80;
+  data[3] = 0x01;
+  data[33] = 0x01;
 
-SendoutData();
-    readSerial();
+  checksum = 0;
+  for (int x = 0; x < MessageLength - 1; x++)
+  {
+    checksum += data[x];
+  }
+
+  while (checksum > 255)
+  {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  data[36] = checksum & 0xFF;
+
+  paradoxSerial.write(data, MessageLength);
+
+    readSerialQuick();
 
   bool Fire=bitRead(inData[17],7);
   bool Audible=bitRead(inData[17],6);
@@ -694,7 +710,7 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
  
 
 
-//sendMQTT(root_topicStatus,"Timer_Loss=" +String(inData[4]) );
+
  retval = "{ \"zoneisbypassed\":\""  + String(zoneisbypassed) + "\"" +
                   ",\"ParamedicAlarm\":\"" + String(ParamedicAlarm) + "\"}";
 
