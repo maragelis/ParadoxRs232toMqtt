@@ -122,6 +122,8 @@ void setup() {
   
   sendMQTT(root_topicStatus,"ParadoxController Vdev");
   //PanelStatus0();
+
+    
   
 }
 
@@ -137,7 +139,6 @@ void loop() {
   
 
 }
-
 void StartSSDP()
 {
   if (WiFi.waitForConnectResult() == WL_CONNECTED) {
@@ -168,6 +169,7 @@ void StartSSDP()
     Serial.printf("Ready!\n");
   }
 }
+
 
 void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
 {
@@ -204,10 +206,21 @@ void sendMQTT(String topicNameSend, String dataStr){
     trc(topicNameSend);
 
 }
-void readSerial() {
- 
+
+void readSerialQuick(){
+  while (paradoxSerial.available()<37  )  
+     { 
+      //client.loop();
+      }                            
     
-     while (paradoxSerial.available()<37  )  
+     { 
+       readSerialData();
+     }
+
+}
+
+void readSerial(){
+  while (paradoxSerial.available()<37  )  
      { 
       ArduinoOTA.handle();
       client.loop();
@@ -215,6 +228,15 @@ void readSerial() {
      }                            
     
      { 
+       readSerialData();
+     }
+
+}
+
+void readSerialData() {
+ 
+    
+     
         pindex=0;
         
         while(pindex < 37) // Paradox packet is 37 bytes 
@@ -246,7 +268,7 @@ void readSerial() {
                      //sendMQTT(root_topicStatus, "panel Login");
                 }
               }
-     }
+     
 }
 
 void blink(int duration) {
@@ -273,9 +295,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
   String callbackstring = String((char *)payload);
   inPayload data = Decodejson((char *)payload);
   PanelError= false;
-  
+  trc("Start login");
   doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
-
+  trc("end login");
   int cnt = 0;
   while (!PannelConnected && cnt < 10)
   {
@@ -490,7 +512,7 @@ void ControlPanel(inPayload data){
 
   trc("sending Data");
   paradoxSerial.write(armdata, MessageLength);
-  readSerial();
+  readSerialQuick();
 
   if ( inData[0]  >= 40 && inData[0] <= 45)
   {
@@ -720,23 +742,25 @@ void doLogin(byte pass1, byte pass2){
   {
     // for (int x = 0; x < MessageLength; x++)
     // {
-    //   paradoxSerial.print("Address-");
-    //   paradoxSerial.print(x);
-    //   paradoxSerial.print("=");
-    //   paradoxSerial.println(data[x], HEX);
+    //   Serial.print("Address-");
+    //   Serial.print(x);
+    //   Serial.print("=");
+    //   Serial.println(data[x], HEX);
     // }
   }
+   trc("sending serial");
     paradoxSerial.write(data, MessageLength);
-    readSerial();
+    trc("end serial send");
+    readSerialQuick();
     if (TRACE)
     {
-      // for (int x = 0; x < MessageLength; x++)
-      // {
-      //   paradoxSerial.print("replAddress-");
-      //   paradoxSerial.print(x);
-      //   paradoxSerial.print("=");
-      //   paradoxSerial.println(inData[x], HEX);
-      // }
+      //  for (int x = 0; x < MessageLength; x++)
+      //  {
+      //    Serial.print("replAddress-");
+      //    Serial.print(x);
+      //    Serial.print("=");
+      //    Serial.println(inData[x], HEX);
+      //  }
     }
       data1[0] = 0x00;
       data1[4] = inData[4];
@@ -765,23 +789,23 @@ void doLogin(byte pass1, byte pass2){
       {
         // for (int x = 0; x < MessageLength; x++)
         // {
-        //   paradoxSerial.print("SendinGINITAddress-");
-        //   paradoxSerial.print(x);
-        //   paradoxSerial.print("=");
-        //   paradoxSerial.println(data1[x], HEX);
+        //   Serial.print("SendinGINITAddress-");
+        //   Serial.print(x);
+        //   Serial.print("=");
+        //   Serial.println(data1[x], HEX);
         // }
       }
 
       paradoxSerial.write(data1, MessageLength);
-      readSerial();
+      readSerialQuick();
       if (TRACE)
       {
         // for (int x = 0; x < MessageLength; x++)
         // {
-        //   paradoxSerial.print("lastAddress-");
-        //   paradoxSerial.print(x);
-        //   paradoxSerial.print("=");
-        //   paradoxSerial.println(inData[x], HEX);
+        //   Serial.print("lastAddress-");
+        //   Serial.print(x);
+        //   Serial.print("=");
+        //   Serial.println(inData[x], HEX);
         // }
       }
         
