@@ -2,5 +2,6 @@
     "board": "esp8266:esp8266:huzzah",
     "configuration": "CpuFrequency=80,FlashSize=4M3M,LwIPVariant=v2mss536,Debug=Disabled,DebugLevel=None____,FlashErase=none,UploadSpeed=115200",
     "sketch": "ParadoxAlarmSystem/ParadoxAlarmSystemOTA/ParadoxAlarmSystemOTA.ino",
-    "port": "/dev/cu.SLAB_USBtoUART"
+    "port": "/dev/cu.SLAB_USBtoUART",
+    "output": "../ArduinoOutput"
 }

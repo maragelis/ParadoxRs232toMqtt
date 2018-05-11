@@ -16,7 +16,7 @@
 
 #define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
-#define Hostname          "ParadoxDev" //not more than 15 
+#define Hostname          "paradoxdev" //not more than 15 
 
 #define paradoxRX  13
 #define paradoxTX  15
@@ -87,7 +87,8 @@ void setup() {
     blink(100);
     delay(1000);
     WiFi.mode(WIFI_STA);
-    
+    //WiFi.hostname(Hostname);
+
     paradoxSerial.begin(9600);
     paradoxSerial.flush();
      
@@ -119,7 +120,8 @@ void setup() {
   trc("Finnished wifi setup");
   delay(1500);
   lastReconnectAttempt = 0;
-  wifi_station_set_hostname(Hostname);  
+ 
+  
   
   sendMQTT(root_topicStatus,Hostname);
   //PanelStatus0();
@@ -161,9 +163,9 @@ void StartSSDP()
     SSDP.setSchemaURL("description.xml");
     SSDP.setDeviceType("upnp:rootdevice");
     SSDP.setHTTPPort(80);
-    SSDP.setName("Paradox Alarm Controller");
+    SSDP.setName(Hostname);
     SSDP.setSerialNumber(WiFi.macAddress());
-    SSDP.setURL("index.html");
+    SSDP.setURL(String("http://") + WiFi.localIP().toString().c_str() +"/index.html");
     SSDP.setModelName("ESP8266Wemos");
     SSDP.setModelNumber("WEMOSD1");
     SSDP.setModelURL("https://github.com/maragelis/ParadoxRs232toMqtt");
@@ -171,7 +173,7 @@ void StartSSDP()
     SSDP.setManufacturerURL("https://github.com/maragelis/");
     SSDP.begin();
 
-    if (!MDNS.begin("esp8266")) {
+    if (!MDNS.begin(Hostname)) {
     trc("Error setting up MDNS responder!");
     while (1) {
       delay(1000);
