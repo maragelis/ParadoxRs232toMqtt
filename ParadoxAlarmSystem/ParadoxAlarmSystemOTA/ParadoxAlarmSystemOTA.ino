@@ -87,7 +87,7 @@ void setup() {
     blink(100);
     delay(1000);
     WiFi.mode(WIFI_STA);
-    //WiFi.hostname(Hostname);
+    
 
     paradoxSerial.begin(9600);
     paradoxSerial.flush();
