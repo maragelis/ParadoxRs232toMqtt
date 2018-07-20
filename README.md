@@ -4,7 +4,7 @@ This project uses a wemos esp8266 to read events of the serial bus of any Parado
 The TX from the alarm panel is connected directly to wemos RX, I used  a voltage divider a 2.2KΩ and a  4.7kΩ resisters, seeing 
 as paradox serial bus is 5Vdc. 
      
-  Debug messages can be read through D8 TXD2 Pin on the wemos or if you prefer IO15.
+  Debug messages can be read through usb serial.
         
         
 The 37 byte message is broken down into a json message with "Event Group" and "Sub-group" 
