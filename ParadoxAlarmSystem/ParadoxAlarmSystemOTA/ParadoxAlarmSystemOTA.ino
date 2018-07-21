@@ -14,7 +14,7 @@
 
 #define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
-#define Hostname          "paradoxtest" //not more than 15 
+#define Hostname          "paradox" //not more than 15 
 
 #define paradoxRX  13
 #define paradoxTX  15
@@ -32,9 +32,9 @@
 
 #define TRACE 1
 
-  const char *root_topicOut = "/paradoxtest/out";
-  const char *root_topicStatus = "/paradoxtest/status";
-  const char *root_topicIn = "/paradoxtest/in";
+  const char *root_topicOut = "/paradox/out";
+  const char *root_topicStatus = "/paradox/status";
+  const char *root_topicIn = "/paradox/in";
 
 WiFiClient espClient;
 // client parameters
