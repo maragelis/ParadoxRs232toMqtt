@@ -17,6 +17,7 @@ After flashing the wemos connect to its wifi, (PARADOXController_AP), go to page
 
 
 20180721 Changed to user based password, use the same 4 digit code used on panel for control. 
+
 20180804 Wiki added Home Assistant Config (works with node-red) 
 
 
