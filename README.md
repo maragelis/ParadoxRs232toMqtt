@@ -58,7 +58,9 @@ Command can be one of the following
   if arm,sleep,disarm subcomand is partition
 	
   if bypass subcomand is zone (0-31) 
-	
+  
+  if panelstatus subcomand 0 panel data 
+  		 subcomand 1 panel voltage and battery data 	
   all others send 0
   
   
