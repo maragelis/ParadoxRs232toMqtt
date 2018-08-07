@@ -374,30 +374,30 @@ void callback(char* topic, byte* payload, unsigned int length) {
 byte getPanelCommand(String data){
   byte retval=0x00;
   data.toLowerCase();
-  if (data == "stay" || data == "Stay" || data == "STAY" || data=="0")
+  if (data == "stay" || data=="0")
   {
     
     retval = Stay_Arm;
     
   }
-  else if (data == "arm" || data == "Arm" || data == "ARM" || data=="1")
+  else if (data == "arm" || data=="1")
   {    
     retval= Full_Arm;
   }
-  else if (data == "sleep" || data == "Sleep" || data == "SLEEP" || data=="2")
+  else if (data == "sleep" || data=="2")
   {
     
     retval= Sleep_Arm;
     
   }
-  else if (data == "disarm" || data == "Disarm" || data == "DISARM" || data == "3")
+  else if (data == "disarm" || data == "3")
   {
     
     retval=Disarm;
     
   }
 
-  else if (data == "bypass" || data == "Bypass" || data == "BYPASS" || data == "10")
+  else if (data == "bypass" || data == "10")
   {
     
     retval=Bypass;
@@ -426,7 +426,7 @@ byte getPanelCommand(String data){
     retval=0x92;
     
   }
-  else if (data == "disconnect" || data == "Disconnect" || data == "DISCONNECT" || data == "99")
+  else if (data == "disconnect" || data == "99")
   {
     retval=0x00;
     PanelDisconnect();
@@ -685,6 +685,7 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
                   ",\"SleepFlg\":\""  + String(SleepFlg) + "\"" +
                   ",\"ArmFlg\":\"" + String(ArmFlg) + "\"}";
 
+
     trc(retval);
     if (!ShowOnlyState)
     {
@@ -694,6 +695,7 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
      if (AlarmFlg)
     {
        retval = "{ \"PanelArmStatus\":4,\"description\":\"ALARM_TRIGGERED\"}" ;
+       
     }
     else if (StayFlg)
     {
@@ -748,7 +750,7 @@ void doLogin(byte pass1, byte pass2){
     serial_flush_buffer();
   data[0] = 0x5f;
   data[1] = 0x20;
-  data[33] = 0x01;
+  data[33] = 0x05;
   data[34] = 0x00;
   data[35] = 0x00;
   data[33] = 0x01;
@@ -768,13 +770,13 @@ void doLogin(byte pass1, byte pass2){
 
   if (TRACE)
   {
-    // for (int x = 0; x < MessageLength; x++)
-    // {
-    //   Serial.print("Address-");
-    //   Serial.print(x);
-    //   Serial.print("=");
-    //   Serial.println(data[x], HEX);
-    // }
+    for (int x = 0; x < MessageLength; x++)
+    {
+      Serial.print("Address-");
+      Serial.print(x);
+      Serial.print("=");
+      Serial.println(data[x], HEX);
+    }
   }
    
     paradoxSerial.write(data, MessageLength);
@@ -782,13 +784,13 @@ void doLogin(byte pass1, byte pass2){
     readSerialQuick();
     if (TRACE)
     {
-      //  for (int x = 0; x < MessageLength; x++)
-      //  {
-      //    Serial.print("replAddress-");
-      //    Serial.print(x);
-      //    Serial.print("=");
-      //    Serial.println(inData[x], HEX);
-      //  }
+       for (int x = 0; x < MessageLength; x++)
+       {
+         Serial.print("replAddress-");
+         Serial.print(x);
+         Serial.print("=");
+         Serial.println(inData[x], HEX);
+       }
     }
       data1[0] = 0x00;
       data1[4] = inData[4];
@@ -797,9 +799,14 @@ void doLogin(byte pass1, byte pass2){
       data1[7] = inData[7];
       data1[7] = inData[8];
       data1[9] = inData[9];
-      data1[10] = pass1; //panel pc password digit 1 & 2
-      data1[11] = pass2; //panel pc password digit 3 & 4
-      data1[33] = 0x01;
+      //data1[10] = pass1; //panel pc password digit 1 & 2
+      //data1[11] = pass2; //panel pc password digit 3 & 4
+      data1[10] = 0x00;
+      data1[11] = 0x00;
+      data1[13] = 0x55;
+      data1[14] = pass1; //panel pc password digit 1 & 2
+      data1[15] = pass2; //panel pc password digit 3 & 4
+      data1[33] = 0x05;
 
       checksum = 0;
       for (int x = 0; x < MessageLength - 1; x++)

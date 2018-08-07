@@ -3,6 +3,8 @@
         {
             "name": "Mac",
             "includePath": [
+                "/Users/panagiotismaragelis/Library/Arduino15/packages/esp8266/tools/**",
+                "/Users/panagiotismaragelis/Library/Arduino15/packages/esp8266/hardware/esp8266/2.4.1/**",
                 "/Users/panagiotis/Library/Arduino15/packages/esp8266/hardware/esp8266/2.4.0-rc2/cores/esp8266",
                 "Users/panagiotis/Documents/Arduino/libraries",
                 "/Users/panagiotis/Documents/Arduino/ParadoxRs232toMqtt/lib",
