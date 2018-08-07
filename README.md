@@ -46,6 +46,7 @@ Command can be one of the following
   arm,
   disarm,
   sleep,
+  stay,
   bypass,
   armstate,
   zonestate,
