@@ -1,4 +1,10 @@
 # ParadoxRs232toMqtt
+I am working on a v2 which has many new features, you can find info under dev branch,
+
+Feel free to test the test branch, and contribute to dev branch.
+
+
+
 This project uses a wemos esp8266 to read events of the serial bus of any Paradox alarm system and send it to Mqtt
 
 The TX from the alarm panel is connected directly to wemos RX , RX from panel to TX of wemos
