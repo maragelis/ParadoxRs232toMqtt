@@ -14,9 +14,9 @@
 
 
 
-#define mqtt_server       "192.168.2.230"
+#define mqtt_server       "192.168.4.225"
 #define mqtt_port         "1883"
-#define Hostname          "paradoxdev" //not more than 15 
+#define Hostname          "paradoxdCTL" //not more than 15 
 
 #define paradoxRX  13
 #define paradoxTX  15
@@ -32,14 +32,14 @@
 
 #define LED LED_BUILTIN
 
-#define TRACE 1
+#define TRACE 0
 
-  const char *root_topicOut = "paradoxdev/out";
-  const char *root_topicStatus = "paradoxdev/status";
-  const char *root_topicIn = "paradoxdev/in";
-  const char *root_topicArmStatus = "paradoxdev/status/Arm";
-  const char *root_topicZoneStatus = "paradoxdev/status/Zone";
-  //root_topicArmStatus
+const char *root_topicOut = "paradoxdCTL/out";
+const char *root_topicStatus = "paradoxdCTL/status";
+const char *root_topicIn = "paradoxdCTL/in";
+const char *root_topicArmStatus = "paradoxdCTL/status/Arm";
+const char *root_topicZoneStatus = "paradoxdCTL/status/Zone";
+//root_topicArmStatus
 
 WiFiClient espClient;
 // client parameters
@@ -83,30 +83,20 @@ typedef struct {
  
 
 void setup() {
-   pinMode(LED_BUILTIN,OUTPUT);
-    blink(100);
-    delay(1000);
-    WiFi.mode(WIFI_STA);
-    
-
-    paradoxSerial.begin(9600);
-    paradoxSerial.flush();
-     
-     
-    Serial.begin(9600);
-    Serial.flush(); // Clean up the serial buffer in case previous junk is there
-    trc("serial monitor is up");
-    
-  
-    
-    blink(1000);
-    serial_flush_buffer();
-
-
-
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED, OUTPUT);
   blink(100);
   delay(1000);
+  WiFi.mode(WIFI_STA);
+
+  paradoxSerial.begin(9600);
+  paradoxSerial.flush();
+
+  Serial.begin(9600);
+  Serial.flush(); // Clean up the serial buffer in case previous junk is there
+  trc("serial monitor is up");
+  serial_flush_buffer();
+
+  
 
   trc("Running MountFs");
   mountfs();
@@ -120,14 +110,7 @@ void setup() {
   trc("Finnished wifi setup");
   delay(1500);
   lastReconnectAttempt = 0;
- 
-  
-  
-  sendMQTT(root_topicStatus,Hostname);
-  //PanelStatus0();
-
-    
-  
+  digitalWrite(LED, HIGH);
 }
 
 void loop() {
@@ -136,7 +119,7 @@ void loop() {
         
    if ( (inData[0] & 0xF0)!=0xE0){ // re-align serial buffer
     
-    blink(200);
+    
     serial_flush_buffer();
   }
   
@@ -245,10 +228,13 @@ void readSerial(){
       ArduinoOTA.handle();
       client.loop();
       HTTP.handleClient();
+      
      }                            
     
-     { 
+     {
+       
        readSerialData();
+       digitalWrite(LED, LOW);
      }
 
 }
@@ -335,7 +321,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if (!PannelConnected)
   {
     trc("Problem connecting to panel");
-    sendMQTT(root_topicStatus, "Problem connecting to panel");
+    sendMQTT(root_topicStatus, "{\"status\":\"Problem connecting to panel\"}");
   }else if (data.Command == 0x90  ) 
   {
     
@@ -363,7 +349,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   } 
   else  {
     trc("Bad Command ");
-    sendMQTT(root_topicStatus, "Bad Command ");
+    sendMQTT(root_topicStatus, "{\"status\":\"Bad Command\" }");
   }
   
   RunningCommand=false;
@@ -513,7 +499,7 @@ void ControlPanel(inPayload data){
 
   if ( inData[0]  >= 40 && inData[0] <= 45)
   {
-    sendMQTT(root_topicStatus, "Command success ");
+    sendMQTT(root_topicStatus, "{\"status\":\"Command success\"} ");
     trc(" Command success ");
     }
   
@@ -1033,15 +1019,15 @@ boolean reconnect() {
     char charBuf[50];
     mqname.toCharArray(charBuf, 50) ;
 
-    if (client.connect(charBuf,root_topicStatus,0,false,"Paradox Disconnected")) {
+    if (client.connect(charBuf,root_topicStatus,0,false,"{\"status\":\"Paradox Disconnected\"}")) {
     // Once connected, publish an announcement...
       //client.publish(root_topicOut,"connected");
       trc("connected");
-      sendMQTT(root_topicStatus,"Paradox Connected");
-    //Topic subscribed so as to get data
-    String topicNameRec = root_topicIn;
-    //Subscribing to topic(s)
-    subscribing(topicNameRec);
+      sendMQTT(root_topicStatus, "{\"status\":\"Paradox connected\"}");
+      //Topic subscribed so as to get data
+      String topicNameRec = root_topicIn;
+      //Subscribing to topic(s)
+      subscribing(topicNameRec);
     } else {
       trc("failed, rc=");
       trc(String(client.state()));
