@@ -1,5 +1,5 @@
 # ParadoxRs232toMqtt
-I am working on a v2 which has many new features, you can find info under dev branch,
+First stable test version of v2 is ready https://github.com/maragelis/ParadoxRs232toMqtt/tree/test
 
 Feel free to test the test branch, and contribute to dev branch.
 
