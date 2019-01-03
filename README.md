@@ -3,7 +3,7 @@ This project uses a wemos esp8266 to read events of the serial bus of any Parado
 
   Alarm system serial on wemos D15 D13
 	
-  Debug messages can be read through usb on the wemos or if you prefer IO15.
+  Debug messages can be read through usb on the wemos.
         
         
 The 37 byte message is broken down into a json message with "Event Group" and "Sub-group" 
