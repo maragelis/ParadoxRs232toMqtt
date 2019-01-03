@@ -63,4 +63,3 @@ Command can be one of the following
   		 subcomand 1 panel voltage and battery data 	
   all others send 0
   
-  
