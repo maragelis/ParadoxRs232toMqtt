@@ -14,9 +14,9 @@
 
 
 
-#define mqtt_server       "192.168.2.230"
+#define mqtt_server       "192.168.4.225"
 #define mqtt_port         "1883"
-#define Hostname          "paradoxdev" //not more than 15 
+#define Hostname          "paradoxdCTL" //not more than 15 
 
 #define paradoxRX  13
 #define paradoxTX  15
@@ -32,14 +32,14 @@
 
 #define LED LED_BUILTIN
 
-#define TRACE 1
+#define TRACE 0
 
-  const char *root_topicOut = "paradoxdev/out";
-  const char *root_topicStatus = "paradoxdev/status";
-  const char *root_topicIn = "paradoxdev/in";
-  const char *root_topicArmStatus = "paradoxdev/status/Arm";
-  const char *root_topicZoneStatus = "paradoxdev/status/Zone";
-  //root_topicArmStatus
+const char *root_topicOut = "paradoxdCTL/out";
+const char *root_topicStatus = "paradoxdCTL/status";
+const char *root_topicIn = "paradoxdCTL/in";
+const char *root_topicArmStatus = "paradoxdCTL/status/Arm";
+const char *root_topicZoneStatus = "paradoxdCTL/status/Zone";
+//root_topicArmStatus
 
 WiFiClient espClient;
 // client parameters
@@ -50,6 +50,7 @@ bool shouldSaveConfig = false;
 bool ResetConfig = false;
 bool PannelConnected =false;
 bool PanelError = false;
+bool RunningCommand=false;
 
 unsigned long lastReconnectAttempt = 0UL;
 unsigned long ul_Interval = 5000UL;
@@ -82,29 +83,20 @@ typedef struct {
  
 
 void setup() {
-   pinMode(LED_BUILTIN,OUTPUT);
-    blink(100);
-    delay(1000);
-    WiFi.mode(WIFI_STA);
-    
-    paradoxSerial.begin(9600);
-    paradoxSerial.flush();
-     
-     
-    Serial.begin(9600);
-    Serial.flush(); // Clean up the serial buffer in case previous junk is there
-    trc("serial monitor is up");
-    
-  
-    
-    blink(1000);
-    serial_flush_buffer();
-
-
-
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED, OUTPUT);
   blink(100);
   delay(1000);
+  WiFi.mode(WIFI_STA);
+
+  paradoxSerial.begin(9600);
+  paradoxSerial.flush();
+
+  Serial.begin(9600);
+  Serial.flush(); // Clean up the serial buffer in case previous junk is there
+  trc("serial monitor is up");
+  serial_flush_buffer();
+
+  
 
   trc("Running MountFs");
   mountfs();
@@ -113,18 +105,12 @@ void setup() {
   StartSSDP();
   
 
-  ArduinoOTA.setHostname("ParadoxControllerV2Dev");
+  ArduinoOTA.setHostname(Hostname);
   ArduinoOTA.begin();
   trc("Finnished wifi setup");
   delay(1500);
   lastReconnectAttempt = 0;
-  wifi_station_set_hostname(Hostname);  
-  
-  sendMQTT(root_topicStatus,"ParadoxController Vdev");
-  //PanelStatus0();
-
-    
-  
+  digitalWrite(LED, HIGH);
 }
 
 void loop() {
@@ -133,7 +119,7 @@ void loop() {
         
    if ( (inData[0] & 0xF0)!=0xE0){ // re-align serial buffer
     
-    blink(200);
+    
     serial_flush_buffer();
   }
   
@@ -145,8 +131,12 @@ void StartSSDP()
 
     Serial.printf("Starting HTTP...\n");
     HTTP.on("/index.html", HTTP_GET, []() {
-      HTTP.send(200, "text/plain", "ParadoxController Vdev!");
+      HTTP.send(200, "text/plain", Hostname);
     });
+    HTTP.on("/", HTTP_GET, []() {
+      HTTP.send(200, "text/plain", Hostname);
+    });
+
     HTTP.on("/description.xml", HTTP_GET, []() {
       SSDP.schema(HTTP.client());
     });
@@ -156,9 +146,9 @@ void StartSSDP()
     SSDP.setSchemaURL("description.xml");
     SSDP.setDeviceType("upnp:rootdevice");
     SSDP.setHTTPPort(80);
-    SSDP.setName("Paradox Alarm Controller");
+    SSDP.setName(Hostname);
     SSDP.setSerialNumber(WiFi.macAddress());
-    SSDP.setURL("index.html");
+    SSDP.setURL(String("http://") + WiFi.localIP().toString().c_str() +"/index.html");
     SSDP.setModelName("ESP8266Wemos");
     SSDP.setModelNumber("WEMOSD1");
     SSDP.setModelURL("https://github.com/maragelis/ParadoxRs232toMqtt");
@@ -166,7 +156,20 @@ void StartSSDP()
     SSDP.setManufacturerURL("https://github.com/maragelis/");
     SSDP.begin();
 
-    Serial.printf("Ready!\n");
+    if (!MDNS.begin(Hostname)) {
+    trc("Error setting up MDNS responder!");
+    while (1) {
+      delay(1000);
+    }
+  }
+    trc("mDNS responder started");
+
+  
+
+  // Add service to MDNS-SD
+    MDNS.addService("http", "tcp", 80);
+
+    trc("Ready!\n");
   }
 }
 
@@ -225,10 +228,13 @@ void readSerial(){
       ArduinoOTA.handle();
       client.loop();
       HTTP.handleClient();
+      
      }                            
     
-     { 
+     {
+       
        readSerialData();
+       digitalWrite(LED, LOW);
      }
 
 }
@@ -252,8 +258,9 @@ void readSerialData() {
                 paradox.event = inData[7];
                 paradox.sub_event = inData[8];
                 String zlabel = String(inData[15]) + String(inData[16]) + String(inData[17]) + String(inData[18]) + String(inData[19]) + String(inData[20]) + String(inData[21]) + String(inData[22]) + String(inData[23]) + String(inData[24]) + String(inData[25]) + String(inData[26]) + String(inData[27]) + String(inData[28]) + String(inData[29]) + String(inData[30]);
+                if (inData[14]!= 1){
                 paradox.dummy = zlabel;
-
+                }
                 SendJsonString(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
                 if (inData[7] == 48 && inData[8] == 3)
                 {
@@ -287,6 +294,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
   // In order to republish this payload, a copy must be made
   // as the orignal payload buffer will be overwritten whilst
   // constructing the PUBLISH packet.
+   if (RunningCommand){
+     trc("Command already Running exiting");
+      return;
+    }
   trc("Hey I got a callback ");
   // Conversion to a printable string
   payload[length] = '\0';
@@ -304,11 +315,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
     readSerial();
     cnt++;    
   }
-  
+   
+
+  RunningCommand=true;
   if (!PannelConnected)
   {
     trc("Problem connecting to panel");
-    sendMQTT(root_topicStatus, "Problem connecting to panel");
+    sendMQTT(root_topicStatus, "{\"status\":\"Problem connecting to panel\"}");
   }else if (data.Command == 0x90  ) 
   {
     
@@ -336,9 +349,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
   } 
   else  {
     trc("Bad Command ");
-    sendMQTT(root_topicStatus, "Bad Command ");
+    sendMQTT(root_topicStatus, "{\"status\":\"Bad Command\" }");
   }
   
+  RunningCommand=false;
   
 }
 
@@ -346,30 +360,30 @@ void callback(char* topic, byte* payload, unsigned int length) {
 byte getPanelCommand(String data){
   byte retval=0x00;
   data.toLowerCase();
-  if (data == "stay" || data == "Stay" || data == "STAY" || data=="0")
+  if (data == "stay" || data=="0")
   {
     
     retval = Stay_Arm;
     
   }
-  else if (data == "arm" || data == "Arm" || data == "ARM" || data=="1")
+  else if (data == "arm" || data=="1")
   {    
     retval= Full_Arm;
   }
-  else if (data == "sleep" || data == "Sleep" || data == "SLEEP" || data=="2")
+  else if (data == "sleep" || data=="2")
   {
     
     retval= Sleep_Arm;
     
   }
-  else if (data == "disarm" || data == "Disarm" || data == "DISARM" || data == "3")
+  else if (data == "disarm" || data == "3")
   {
     
     retval=Disarm;
     
   }
 
-  else if (data == "bypass" || data == "Bypass" || data == "BYPASS" || data == "10")
+  else if (data == "bypass" || data == "10")
   {
     
     retval=Bypass;
@@ -398,7 +412,7 @@ byte getPanelCommand(String data){
     retval=0x92;
     
   }
-  else if (data == "disconnect" || data == "Disconnect" || data == "DISCONNECT" || data == "99")
+  else if (data == "disconnect" || data == "99")
   {
     retval=0x00;
     PanelDisconnect();
@@ -408,62 +422,29 @@ byte getPanelCommand(String data){
   return retval;
 }
 
-void getdatapackage()
-{
- // byte data[MessageLength] = {};
-  //byte checksum;
-  for (int x = 0; x < MessageLength; x++)
-  {
-    outData[x] = 0x00;
-  }
-
-  //return data;
-}
 
 
 void panelSetDate(){
-  //byte data[MessageLength] = {};
+  byte data[MessageLength] = {};
   byte checksum;
-  // for (int x = 0; x < MessageLength; x++)
-  // {
-  //   data[x] = 0x00;
-  // }
+   for (int x = 0; x < MessageLength; x++)
+  {
+    data[x] = 0x00;
+  }
 
-  getdatapackage();
+  data[0] = 0x30;
+  data[4] = 0x21;
+  data[5] = 0x18;
+  data[6] = 0x05;
+  data[7] = 0x05;
+  data[8] = 0x13;
+  data[9] = 0x22;
+  data[33] = 0x01;
 
-  outData[0] = 0x30;
-  outData[4] = 0x21;
-  outData[5] = 0x18;
-  outData[6] = 0x05;
-  outData[7] = 0x05;
-  outData[8] = 0x13;
-  outData[9] = 0x22;
-  outData[33] = 0x01;
-
-  // checksum = 0;
-  // for (int x = 0; x < MessageLength - 1; x++)
-  // {
-  //   checksum += data[x];
-  // }
-
-  // while (checksum > 255)
-  // {
-  //   checksum = checksum - (checksum / 256) * 256;
-  // }
-
-  // data[36] = checksum & 0xFF;
-
-  // paradoxSerial.write(data, MessageLength);
-  SendoutData();
-}
-
-void SendoutData()
-{
-  byte checksum;
-  checksum = 0;
+   checksum = 0;
   for (int x = 0; x < MessageLength - 1; x++)
   {
-    checksum += outData[x];
+    checksum += data[x];
   }
 
   while (checksum > 255)
@@ -471,10 +452,12 @@ void SendoutData()
     checksum = checksum - (checksum / 256) * 256;
   }
 
-  outData[36] = checksum & 0xFF;
+  data[36] = checksum & 0xFF;
 
-  paradoxSerial.write(outData, MessageLength);
+  paradoxSerial.write(data, MessageLength);
+  
 }
+
 
 void ControlPanel(inPayload data){
   byte armdata[MessageLength] = {};
@@ -516,7 +499,7 @@ void ControlPanel(inPayload data){
 
   if ( inData[0]  >= 40 && inData[0] <= 45)
   {
-    sendMQTT(root_topicStatus, "Command success ");
+    sendMQTT(root_topicStatus, "{\"status\":\"Command success\"} ");
     trc(" Command success ");
     }
   
@@ -549,23 +532,42 @@ void PanelDisconnect(){
   data[36] = checksum & 0xFF;
 
   paradoxSerial.write(data, MessageLength);
-  readSerial();
+  readSerialQuick();
 
   
 }
 
 void PanelStatus0(bool showonlyZone ,int zone)
 {
-  
-  getdatapackage();
+  byte data[MessageLength] = {};
+  byte checksum;
+  for (int x = 0; x < MessageLength; x++)
+  {
+    data[x] = 0x00;
+  }
+
   serial_flush_buffer();
-  outData[0] = 0x50;
-  outData[1] = 0x00;
-  outData[2] = 0x80;
-  outData[3] = 0x00;
-  outData[33] = 0x01;
-  SendoutData();
-  readSerial();
+  data[0] = 0x50;
+  data[1] = 0x00;
+  data[2] = 0x80;
+  data[3] = 0x00;
+  data[33] = 0x01;
+ checksum = 0;
+  for (int x = 0; x < MessageLength - 1; x++)
+  {
+    checksum += data[x];
+  }
+
+  while (checksum > 255)
+  {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  data[36] = checksum & 0xFF;
+
+  paradoxSerial.write(data, MessageLength);
+  
+  readSerialQuick();
 
     bool Timer_Loss = bitRead(inData[4],7);
     bool PowerTrouble  = bitRead(inData[4],1);
@@ -597,24 +599,15 @@ String retval = "{ \"Timer_Loss\":\""  + String(Timer_Loss) + "\"" +
      for (int j = 0 ; j < 8;j++) 
        {
          Zonename = "Z" + String(++zcnt);
-         trc("zonename=");
-         trc(Zonename);
-        
+
         retval = "{ \""+ Zonename +"\" :\""+ bitRead(inData[i],j) +"\"}" ;
         trc (retval);
-        if (zone==0 || zone== zcnt)
+        if ((zone==0 && bitRead(inData[i],j) == 1) || zone== zcnt)
         {
-          sendMQTT(root_topicZoneStatus ,retval);
+           sendMQTT(root_topicZoneStatus ,retval);
         }
        }
-
-
     }
-
-    
-
-  
-
 }
 
 void ZoneState(int zone)
@@ -629,17 +622,36 @@ void ArmState()
 
 void PanelStatus1(bool ShowOnlyState)
 {
-  getdatapackage();
+  byte data[MessageLength] = {};
+  byte checksum;
+  for (int x = 0; x < MessageLength; x++)
+  {
+    data[x] = 0x00;
+  }
 
   serial_flush_buffer();
-  outData[0] = 0x50;
-  outData[1] = 0x00;
-  outData[2] = 0x80;
-  outData[3] = 0x01;
-  outData[33] = 0x01;
+  data[0] = 0x50;
+  data[1] = 0x00;
+  data[2] = 0x80;
+  data[3] = 0x01;
+  data[33] = 0x01;
 
-SendoutData();
-    readSerial();
+  checksum = 0;
+  for (int x = 0; x < MessageLength - 1; x++)
+  {
+    checksum += data[x];
+  }
+
+  while (checksum > 255)
+  {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  data[36] = checksum & 0xFF;
+
+  paradoxSerial.write(data, MessageLength);
+
+    readSerialQuick();
 
   bool Fire=bitRead(inData[17],7);
   bool Audible=bitRead(inData[17],6);
@@ -659,12 +671,19 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
                   ",\"SleepFlg\":\""  + String(SleepFlg) + "\"" +
                   ",\"ArmFlg\":\"" + String(ArmFlg) + "\"}";
 
+
     trc(retval);
     if (!ShowOnlyState)
     {
     sendMQTT(root_topicStatus,retval);
     }
-    if (StayFlg)
+
+     if (AlarmFlg)
+    {
+       retval = "{ \"PanelArmStatus\":4,\"description\":\"ALARM_TRIGGERED\"}" ;
+       
+    }
+    else if (StayFlg)
     {
        retval = "{ \"PanelArmStatus\":0,\"description\":\"STAY_ARM\"}" ;
     }else if (SleepFlg)
@@ -679,10 +698,7 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
     {
        retval = "{ \"PanelArmStatus\":3,\"description\":\"DISARMED\"}" ;
     }
-    else if (AlarmFlg)
-    {
-       retval = "{ \"PanelArmStatus\":4,\"description\":\"ALARM_TRIGGERED\"}" ;
-    }
+    
     else
     {
        retval = "{ \"PanelArmStatus\":99,\"description\":\"unknown\"}" ;
@@ -694,7 +710,7 @@ String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
  
 
 
-//sendMQTT(root_topicStatus,"Timer_Loss=" +String(inData[4]) );
+
  retval = "{ \"zoneisbypassed\":\""  + String(zoneisbypassed) + "\"" +
                   ",\"ParamedicAlarm\":\"" + String(ParamedicAlarm) + "\"}";
 
@@ -720,7 +736,7 @@ void doLogin(byte pass1, byte pass2){
     serial_flush_buffer();
   data[0] = 0x5f;
   data[1] = 0x20;
-  data[33] = 0x01;
+  data[33] = 0x05;
   data[34] = 0x00;
   data[35] = 0x00;
   data[33] = 0x01;
@@ -740,27 +756,27 @@ void doLogin(byte pass1, byte pass2){
 
   if (TRACE)
   {
-    // for (int x = 0; x < MessageLength; x++)
-    // {
-    //   Serial.print("Address-");
-    //   Serial.print(x);
-    //   Serial.print("=");
-    //   Serial.println(data[x], HEX);
-    // }
+    for (int x = 0; x < MessageLength; x++)
+    {
+      Serial.print("Address-");
+      Serial.print(x);
+      Serial.print("=");
+      Serial.println(data[x], HEX);
+    }
   }
-   trc("sending serial");
+   
     paradoxSerial.write(data, MessageLength);
-    trc("end serial send");
+    
     readSerialQuick();
     if (TRACE)
     {
-      //  for (int x = 0; x < MessageLength; x++)
-      //  {
-      //    Serial.print("replAddress-");
-      //    Serial.print(x);
-      //    Serial.print("=");
-      //    Serial.println(inData[x], HEX);
-      //  }
+       for (int x = 0; x < MessageLength; x++)
+       {
+         Serial.print("replAddress-");
+         Serial.print(x);
+         Serial.print("=");
+         Serial.println(inData[x], HEX);
+       }
     }
       data1[0] = 0x00;
       data1[4] = inData[4];
@@ -769,9 +785,14 @@ void doLogin(byte pass1, byte pass2){
       data1[7] = inData[7];
       data1[7] = inData[8];
       data1[9] = inData[9];
-      data1[10] = pass1; //panel pc password digit 1 & 2
-      data1[11] = pass2; //panel pc password digit 3 & 4
-      data1[33] = 0x01;
+      //data1[10] = pass1; //panel pc password digit 1 & 2
+      //data1[11] = pass2; //panel pc password digit 3 & 4
+      data1[10] = 0x00;
+      data1[11] = 0x00;
+      data1[13] = 0x55;
+      data1[14] = pass1; //panel pc password digit 1 & 2
+      data1[15] = pass2; //panel pc password digit 3 & 4
+      data1[33] = 0x05;
 
       checksum = 0;
       for (int x = 0; x < MessageLength - 1; x++)
@@ -920,7 +941,7 @@ void setup_wifi(){
     
 
     
-    if (!wifiManager.autoConnect("PARADOXControllerDEV_AP", "")) {
+    if (!wifiManager.autoConnect(Hostname, "")) {
       trc("failed to connect and hit timeout");
       delay(3000);
       //reset and try again, or maybe put it to deep sleep
@@ -959,8 +980,8 @@ void setup_wifi(){
       //end save
     }
   
-    trc("local ip : ");
-    Serial.println(WiFi.localIP());
+    //trc("local ip : ");
+    //Serial.println(WiFi.localIP());
   
     
     trc("Setting Mqtt Server values");
@@ -998,15 +1019,15 @@ boolean reconnect() {
     char charBuf[50];
     mqname.toCharArray(charBuf, 50) ;
 
-    if (client.connect(charBuf,root_topicStatus,0,false,"Paradox Disconnected")) {
+    if (client.connect(charBuf,root_topicStatus,0,false,"{\"status\":\"Paradox Disconnected\"}")) {
     // Once connected, publish an announcement...
       //client.publish(root_topicOut,"connected");
       trc("connected");
-      sendMQTT(root_topicStatus,"Paradox Connected");
-    //Topic subscribed so as to get data
-    String topicNameRec = root_topicIn;
-    //Subscribing to topic(s)
-    subscribing(topicNameRec);
+      sendMQTT(root_topicStatus, "{\"status\":\"Paradox connected\"}");
+      //Topic subscribed so as to get data
+      String topicNameRec = root_topicIn;
+      //Subscribing to topic(s)
+      subscribing(topicNameRec);
     } else {
       trc("failed, rc=");
       trc(String(client.state()));
