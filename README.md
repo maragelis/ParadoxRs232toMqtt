@@ -14,19 +14,19 @@ and one more dummy attribute which is the zone/partition label.
 
 See wiki for more info on Groups and sub groups 
 
-After flashing the wemos connect to its wifi, (PARADOXController_AP), go to page 192.168.4.1 give it your wifi credentials and MQtt server address. Thats it  
+After flashing the wemos connect to its wifi, (paradoxdCTL), go to page 192.168.4.1 give it your wifi credentials and MQtt server address. Thats it  
 
 Mqtt topics 
 
-paradoxdev/out           <- all alarm event messages
+paradoxdCTL/out           <- all alarm event messages
 
-paradoxdev/status       <- program messages
+paradoxdCTL/status       <- program messages
 
-paradoxdev/in           <- in topic 
+paradoxdCTL/in           <- in topic 
 
-paradoxdev/status/Arm   <- Arm status message
+paradoxdCTL/status/Arm   <- Arm status message
 
-paradoxdev/status/Zone  <- Zone status messages
+paradoxdCTL/status/Zone  <- Zone status messages
 
 
 
