@@ -22,9 +22,14 @@ See wiki for more info on Groups and sub groups
 After flashing the wemos connect to its wifi, (PARADOXController_AP), go to page 192.168.4.1 give it your wifi credentials and MQtt server address. Thats it  
 
 
-20180721 Changed to user based password, use the same 4 digit code used on panel for control. 
+20190104 Added wiki Node-red v2 flow 
+
+20190103 Added v2 test branch (stable working) 
 
 20180804 Wiki added Home Assistant Config (works with node-red) 
+
+20180721 Changed to user based password, use the same 4 digit code used on panel for control. 
+
 
 
 Continue reading wiki ....
