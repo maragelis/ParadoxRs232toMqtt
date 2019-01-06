@@ -33,6 +33,7 @@
 #define LED LED_BUILTIN
 
 #define TRACE 0
+#define Hassio 1
 
 const char *root_topicOut = "paradoxdCTL/out";
 const char *root_topicStatus = "paradoxdCTL/status";
@@ -173,11 +174,59 @@ void StartSSDP()
   }
 }
 
-
+bool sleepflag;
 void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
 {
-  String retval = "{ \"armstatus\":" + String(armstatus) + ", \"event\":" + String(event) + ", \"sub_event\":" + String(sub_event) + ", \"dummy\":\"" + String(dummy) + "\"}";
-  sendMQTT(root_topicOut,retval); 
+  if (Hassio)
+  {
+    char ZoneTopic[80];
+    char stateTopic[80];
+
+    String zone = String(root_topicOut) + "/zone";
+    zone.toCharArray(ZoneTopic, 80);
+
+    String state_topic = String(root_topicOut) + "/state";
+    state_topic.toCharArray(stateTopic, 80);
+
+    if (event == 1 || event == 0)
+    {
+
+      zone = String(ZoneTopic) + String(sub_event);
+      zone.toCharArray(ZoneTopic, 80);
+
+      String zonestatus="OFF";
+
+      if (event==1 )
+      {
+        zonestatus = "ON";
+      }
+
+      sendMQTT(ZoneTopic, zonestatus);
+    }
+    else if (event ==2  )
+    {
+      
+      if (sub_event==4 )
+        sendMQTT(stateTopic, "triggered");
+      if (sub_event == 11){
+        sendMQTT(stateTopic, "disarmed");
+        sleepflag = false;
+      }
+      if (sub_event == 12 && sleepflag==false)
+        sendMQTT(stateTopic, "armed_away");
+    }
+    else if (event == 6)
+    {
+      
+      if (sub_event == 3 || sub_event == 4){
+        sendMQTT(stateTopic, "armed_home");
+        sleepflag=true;
+      }
+    }
+  }
+     String retval = "{ \"armstatus\":" + String(armstatus) + ", \"event\":" + String(event) + ", \"sub_event\":" + String(sub_event) + ", \"dummy\":\"" + String(dummy) + "\"}";
+    sendMQTT(root_topicOut,retval); 
+  
    
 }
 

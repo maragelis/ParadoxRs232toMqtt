@@ -6,6 +6,9 @@ This project uses a wemos esp8266 to read events of the serial bus of any Parado
   paradoxRX gpio13 wemos d7
 	
   Debug messages can be read through usb on the wemos.
+
+
+Set Hassio flag to 1 for Home assistant see wiki (Home Assistant in V2)
         
         
 The 37 byte message is broken down into a json message with "Event Group" and "Sub-group" 
