@@ -32,8 +32,8 @@
 
 #define LED LED_BUILTIN
 
-#define TRACE 0
-#define Hassio 1
+#define TRACE 1
+#define Hassio 0
 
 const char *root_topicOut = "paradoxdCTL/out";
 const char *root_topicStatus = "paradoxdCTL/status";
@@ -488,7 +488,7 @@ void panelSetDate(){
   data[7] = 0x05;
   data[8] = 0x13;
   data[9] = 0x22;
-  data[33] = 0x01;
+  data[33] = 0x05;
 
    checksum = 0;
   for (int x = 0; x < MessageLength - 1; x++)
@@ -519,7 +519,7 @@ void ControlPanel(inPayload data){
   armdata[0] = 0x40;
   armdata[2] = data.Command;
   armdata[3] = data.Subcommand;;
-  armdata[33] = 0x01;
+  armdata[33] = 0x05;
   armdata[34] = 0x00;
   armdata[35] = 0x00;
   checksum = 0;
@@ -565,7 +565,7 @@ void PanelDisconnect(){
 
   data[0] = 0x70;
   data[2] = 0x05;
-  data[33] = 0x01;
+  data[33] = 0x05;
 
   checksum = 0;
   for (int x = 0; x < MessageLength - 1; x++)
@@ -600,7 +600,7 @@ void PanelStatus0(bool showonlyZone ,int zone)
   data[1] = 0x00;
   data[2] = 0x80;
   data[3] = 0x00;
-  data[33] = 0x01;
+  data[33] = 0x05;
  checksum = 0;
   for (int x = 0; x < MessageLength - 1; x++)
   {
@@ -683,7 +683,7 @@ void PanelStatus1(bool ShowOnlyState)
   data[1] = 0x00;
   data[2] = 0x80;
   data[3] = 0x01;
-  data[33] = 0x01;
+  data[33] = 0x05;
 
   checksum = 0;
   for (int x = 0; x < MessageLength - 1; x++)
@@ -788,7 +788,6 @@ void doLogin(byte pass1, byte pass2){
   data[33] = 0x05;
   data[34] = 0x00;
   data[35] = 0x00;
-  data[33] = 0x01;
 
   checksum = 0;
   for (int x = 0; x < MessageLength - 1; x++)
@@ -857,26 +856,26 @@ void doLogin(byte pass1, byte pass2){
 
       if (TRACE)
       {
-        // for (int x = 0; x < MessageLength; x++)
-        // {
-        //   Serial.print("SendinGINITAddress-");
-        //   Serial.print(x);
-        //   Serial.print("=");
-        //   Serial.println(data1[x], HEX);
-        // }
+         for (int x = 0; x < MessageLength; x++)
+         {
+           Serial.print("SendinGINITAddress-");
+           Serial.print(x);
+           Serial.print("=");
+           Serial.println(data1[x], HEX);
+         }
       }
 
       paradoxSerial.write(data1, MessageLength);
       readSerialQuick();
       if (TRACE)
       {
-        // for (int x = 0; x < MessageLength; x++)
-        // {
-        //   Serial.print("lastAddress-");
-        //   Serial.print(x);
-        //   Serial.print("=");
-        //   Serial.println(inData[x], HEX);
-        // }
+         for (int x = 0; x < MessageLength; x++)
+         {
+           Serial.print("lastAddress-");
+           Serial.print(x);
+           Serial.print("=");
+           Serial.println(inData[x], HEX);
+         }
       }
         
         
