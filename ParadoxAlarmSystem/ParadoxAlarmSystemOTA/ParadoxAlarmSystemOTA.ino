@@ -32,8 +32,10 @@
 
 #define LED LED_BUILTIN
 
-#define TRACE 1
-#define Hassio 0
+
+#define Hassio 1
+bool TRACE = 0;
+
 
 const char *root_topicOut = "paradoxdCTL/out";
 const char *root_topicStatus = "paradoxdCTL/status";
@@ -52,6 +54,7 @@ bool ResetConfig = false;
 bool PannelConnected =false;
 bool PanelError = false;
 bool RunningCommand=false;
+bool JsonParseError=false;
 
 unsigned long lastReconnectAttempt = 0UL;
 unsigned long ul_Interval = 5000UL;
@@ -282,8 +285,7 @@ void readSerial(){
     
      {
        
-       readSerialData();
-       digitalWrite(LED, LOW);
+       readSerialData();       
      }
 
 }
@@ -315,16 +317,17 @@ void readSerialData() {
                 {
                   PannelConnected = false;
                   trc("panel logout");
-                   //sendMQTT(root_topicStatus, "panel logout");
+                   sendMQTT(root_topicStatus, "{\"status\":\"Panel logout\"}");
                 }
-                if (inData[7] == 48 && inData[8] == 2 && !PannelConnected)
+                else if (inData[7] == 48 && inData[8] == 2 )
                 {
                   PannelConnected = true;
                   trc("panel Login");
-                     //sendMQTT(root_topicStatus, "panel Login");
+                  sendMQTT(root_topicStatus, "{\"status\":\"Panel Login Success\"}");
                 }
+                
               }
-     
+              
 }
 
 void blink(int duration) {
@@ -350,21 +353,45 @@ void callback(char* topic, byte* payload, unsigned int length) {
   trc("Hey I got a callback ");
   // Conversion to a printable string
   payload[length] = '\0';
+  inPayload data;
   
   trc("JSON Returned! ====");
   String callbackstring = String((char *)payload);
-  inPayload data = Decodejson((char *)payload);
-  PanelError= false;
-  trc("Start login");
-  doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
-  trc("end login");
-  int cnt = 0;
-  while (!PannelConnected && cnt < 10)
+  if (callbackstring == "Trace=1")
   {
-    readSerial();
-    cnt++;    
+    TRACE=1;
+    Serial.println("Trace is ON");
+    return ;
   }
-   
+  else if (callbackstring == "Trace=0")
+  {
+    TRACE=0;
+    Serial.println("Trace is OFF");
+    return ;
+  }
+  else if (callbackstring=="")
+  {
+    trc("No payload data");
+    return;
+  }
+    else
+    {
+      trc("parsing Recievied Json Data");
+      data = Decodejson((char *)payload);
+      if (JsonParseError)
+      {
+        trc("Error parsing Json Command") ;
+        JsonParseError=false;
+        return;
+      }
+      trc("Json Data is ok ");
+      PanelError = false;
+      trc("Start login");
+      if (!PannelConnected)
+        doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
+      trc("end login");
+      
+    }
 
   RunningCommand=true;
   if (!PannelConnected)
@@ -464,10 +491,13 @@ byte getPanelCommand(String data){
   else if (data == "disconnect" || data == "99")
   {
     retval=0x00;
-    PanelDisconnect();
+    //PanelDisconnect();
   }
-  Serial.print("returned command = ");
-  Serial.println(retval , HEX);
+    if(TRACE)
+    {
+      Serial.print("returned command = ");
+      Serial.println(retval , HEX);
+    }
   return retval;
 }
 
@@ -581,7 +611,7 @@ void PanelDisconnect(){
   data[36] = checksum & 0xFF;
 
   paradoxSerial.write(data, MessageLength);
-  readSerialQuick();
+  
 
   
 }
@@ -806,10 +836,10 @@ void doLogin(byte pass1, byte pass2){
   {
     for (int x = 0; x < MessageLength; x++)
     {
-      Serial.print("Address-");
-      Serial.print(x);
-      Serial.print("=");
-      Serial.println(data[x], HEX);
+      //Serial.print("Address-");
+      //Serial.print(x);
+      //Serial.print("=");
+      //Serial.println(data[x], HEX);
     }
   }
    
@@ -858,15 +888,27 @@ void doLogin(byte pass1, byte pass2){
       {
          for (int x = 0; x < MessageLength; x++)
          {
-           Serial.print("SendinGINITAddress-");
-           Serial.print(x);
-           Serial.print("=");
-           Serial.println(data1[x], HEX);
+          // Serial.print("SendinGINITAddress-");
+          // Serial.print(x);
+          // Serial.print("=");
+          // Serial.println(data1[x], HEX);
          }
       }
 
       paradoxSerial.write(data1, MessageLength);
-      readSerialQuick();
+      readSerial();
+      if (inData[0]==0x10  && inData[1]==0x25)
+      {
+        PannelConnected = true;
+        trc("panel Login");
+        sendMQTT(root_topicStatus, "{\"status\":\"Panel NEware direct successfull connecting\"}");
+      }else
+      {
+        trc("Login response number0");
+            trc(String(inData[0],HEX));
+                trc("Login response number1");
+                    trc(String(inData[1],HEX));
+      }
       if (TRACE)
       {
          for (int x = 0; x < MessageLength; x++)
@@ -889,6 +931,7 @@ struct inPayload Decodejson(char *Payload){
   {
     indata = {0x00,0x00,0x00,0x00};
     trc("JSON parsing failed!");
+    JsonParseError=true;
     return indata;
   }
   else
