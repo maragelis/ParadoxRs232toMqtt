@@ -1,0 +1,401 @@
+[
+    {
+        "id": "47457d89.6de9d4",
+        "type": "tab",
+        "label": "Paradox test",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "bde3ddf.15a152",
+        "type": "mqtt in",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "topic": "paradoxdCTL/out/#",
+        "qos": "2",
+        "broker": "240f31f6.8f29ce",
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "4982cc82.ff8134",
+                "57399545.f09cfc"
+            ]
+        ]
+    },
+    {
+        "id": "9d34b663.160738",
+        "type": "debug",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 550,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "fad11d32.3331a",
+        "type": "inject",
+        "z": "47457d89.6de9d4",
+        "name": "Sleep",
+        "topic": "",
+        "payload": "{\"Command\":\"sleep\",\"Subcommand\":\"0\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 130,
+        "y": 580,
+        "wires": [
+            [
+                "97ca20f5.49b6a"
+            ]
+        ]
+    },
+    {
+        "id": "30f98a64.3bf646",
+        "type": "inject",
+        "z": "47457d89.6de9d4",
+        "name": "arm",
+        "topic": "",
+        "payload": "{\"Command\":\"arm\",\"Subcommand\":\"0\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 130,
+        "y": 620,
+        "wires": [
+            [
+                "97ca20f5.49b6a"
+            ]
+        ]
+    },
+    {
+        "id": "6e90af40.7f95f",
+        "type": "function",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "func": "msg.payload.Command = msg.payload.Command.toString();\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 650,
+        "y": 700,
+        "wires": [
+            [
+                "749155e9.5bdc5c",
+                "3e8779d3.29ba66"
+            ]
+        ]
+    },
+    {
+        "id": "97ca20f5.49b6a",
+        "type": "change",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload.password",
+                "pt": "msg",
+                "to": "1234",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 460,
+        "y": 660,
+        "wires": [
+            [
+                "6e90af40.7f95f",
+                "835b5395.06c96"
+            ]
+        ]
+    },
+    {
+        "id": "ff644ea7.62f23",
+        "type": "inject",
+        "z": "47457d89.6de9d4",
+        "name": "disarm",
+        "topic": "",
+        "payload": "{\"Command\":\"disarm\",\"Subcommand\":\"0\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 130,
+        "y": 700,
+        "wires": [
+            [
+                "97ca20f5.49b6a"
+            ]
+        ]
+    },
+    {
+        "id": "749155e9.5bdc5c",
+        "type": "debug",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 910,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "835b5395.06c96",
+        "type": "debug",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 630,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "4982cc82.ff8134",
+        "type": "json",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 350,
+        "y": 200,
+        "wires": [
+            [
+                "9d34b663.160738"
+            ]
+        ]
+    },
+    {
+        "id": "57399545.f09cfc",
+        "type": "debug",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "x": 350,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "cfa5ede3.bca3b",
+        "type": "mqtt in",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "topic": "paradoxdCTL/status/#",
+        "qos": "2",
+        "broker": "240f31f6.8f29ce",
+        "x": 160,
+        "y": 400,
+        "wires": [
+            [
+                "44fd055d.219f0c"
+            ]
+        ]
+    },
+    {
+        "id": "5504e329.a7e19c",
+        "type": "debug",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 510,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "44fd055d.219f0c",
+        "type": "json",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 330,
+        "y": 400,
+        "wires": [
+            [
+                "5504e329.a7e19c"
+            ]
+        ]
+    },
+    {
+        "id": "8f5d8e90.0dd8e",
+        "type": "inject",
+        "z": "47457d89.6de9d4",
+        "name": "zonestate",
+        "topic": "",
+        "payload": "{\"Command\":\"ZoneState\",\"Subcommand\":\"2\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 120,
+        "y": 900,
+        "wires": [
+            [
+                "97ca20f5.49b6a"
+            ]
+        ]
+    },
+    {
+        "id": "f2909ade.1bd728",
+        "type": "inject",
+        "z": "47457d89.6de9d4",
+        "name": "panelstate",
+        "topic": "",
+        "payload": "{\"Command\":\"armstate\",\"Subcommand\":\"0\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 120,
+        "y": 940,
+        "wires": [
+            [
+                "97ca20f5.49b6a"
+            ]
+        ]
+    },
+    {
+        "id": "3e8779d3.29ba66",
+        "type": "mqtt out",
+        "z": "47457d89.6de9d4",
+        "name": "",
+        "topic": "paradoxdCTL/in",
+        "qos": "0",
+        "retain": "",
+        "broker": "240f31f6.8f29ce",
+        "x": 880,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "a5dfefac.a6c69",
+        "type": "inject",
+        "z": "47457d89.6de9d4",
+        "name": "panelstatus_0",
+        "topic": "",
+        "payload": "{\"Command\":\"panelstatus\",\"Subcommand\":\"0\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 110,
+        "y": 760,
+        "wires": [
+            [
+                "97ca20f5.49b6a"
+            ]
+        ]
+    },
+    {
+        "id": "459e0c31.bb7044",
+        "type": "inject",
+        "z": "47457d89.6de9d4",
+        "name": "panelstatus_1",
+        "topic": "",
+        "payload": "{\"Command\":\"panelstatus\",\"Subcommand\":\"1\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 110,
+        "y": 800,
+        "wires": [
+            [
+                "97ca20f5.49b6a"
+            ]
+        ]
+    },
+    {
+        "id": "9d1f5183.284c3",
+        "type": "inject",
+        "z": "47457d89.6de9d4",
+        "name": "setdate",
+        "topic": "",
+        "payload": "{\"Command\":\"setdate\",\"Subcommand\":\"0\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 130,
+        "y": 840,
+        "wires": [
+            [
+                "97ca20f5.49b6a"
+            ]
+        ]
+    },
+    {
+        "id": "a3d9413f.72f7e",
+        "type": "inject",
+        "z": "47457d89.6de9d4",
+        "name": "stay",
+        "topic": "",
+        "payload": "{\"Command\":\"stay\",\"Subcommand\":\"0\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 130,
+        "y": 660,
+        "wires": [
+            [
+                "97ca20f5.49b6a"
+            ]
+        ]
+    },
+    {
+        "id": "240f31f6.8f29ce",
+        "type": "mqtt-broker",
+        "z": "",
+        "name": "",
+        "broker": "192.168.2.230",
+        "port": "1883",
+        "clientid": "",
+        "usetls": false,
+        "compatmode": true,
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
+    }
+]

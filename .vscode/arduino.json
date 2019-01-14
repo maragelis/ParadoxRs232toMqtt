@@ -1,6 +1,9 @@
 {
-    "board": "esp8266:esp8266:d1_mini",
-    "configuration": "CpuFrequency=80,FlashSize=4M3M,LwIPVariant=v2mss536,Debug=Disabled,DebugLevel=None____,FlashErase=none,UploadSpeed=921600",
+
+    "board": "esp8266:esp8266:huzzah",
+    "configuration": "CpuFrequency=80,VTable=flash,FlashSize=4M1M,LwIPVariant=v2mss536,Debug=Disabled,DebugLevel=None____,FlashErase=none,UploadSpeed=115200",
     "sketch": "ParadoxAlarmSystem/ParadoxAlarmSystemOTA/ParadoxAlarmSystemOTA.ino",
-    "port": "/dev/cu.wchusbserialfd130"
+    "port": "COM5",
+    "output": "../ArduinoOutput"
+
 }
