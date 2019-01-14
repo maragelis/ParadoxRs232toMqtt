@@ -15,7 +15,7 @@ The 37 byte message is broken down into a json message with "Event Group" and "S
 
 and one more dummy attribute which is the zone/partition label.
 
-SOS Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 512
+SOS Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 128
 
 See wiki for more info on Groups and sub groups 
 
