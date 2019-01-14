@@ -1,5 +1,6 @@
 {
     "files.associations": {
+
         "array": "cpp",
         "iterator": "cpp",
         "string": "cpp",

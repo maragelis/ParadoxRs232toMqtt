@@ -1,5 +1,12 @@
 # ParadoxRs232toMqtt
+First stable test version of v2 is ready https://github.com/maragelis/ParadoxRs232toMqtt/tree/test
+
+Feel free to test the test branch, and contribute to dev branch.
+
+
+
 This project uses a wemos esp8266 to read events of the serial bus of any Paradox alarm system and send it to Mqtt
+
 
   Alarm system serial on wemos 
   paradoxTX gpio15 wemos d8 
@@ -9,6 +16,7 @@ This project uses a wemos esp8266 to read events of the serial bus of any Parado
 
 
 Set Hassio flag to 1 for Home assistant see wiki (Home Assistant in V2)
+
         
         
 The 37 byte message is broken down into a json message with "Event Group" and "Sub-group" 
@@ -48,6 +56,7 @@ password is user 4 digit password
 
 Command can be one of the following 
 
+
   arm,
   disarm,
   sleep,
@@ -68,3 +77,17 @@ Command can be one of the following
   		 subcomand 1 panel voltage and battery data 	
   all others send 0
   
+
+
+20190104 Added wiki Node-red v2 flow 
+
+20190103 Added v2 test branch (stable working) 
+
+20180804 Wiki added Home Assistant Config (works with node-red) 
+
+20180721 Changed to user based password, use the same 4 digit code used on panel for control. 
+
+
+
+Continue reading wiki ....
+

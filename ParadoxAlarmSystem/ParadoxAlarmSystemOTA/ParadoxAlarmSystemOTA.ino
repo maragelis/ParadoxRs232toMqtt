@@ -16,7 +16,9 @@
 
 #define mqtt_server       "192.168.4.225"
 #define mqtt_port         "1883"
+
 #define Hostname          "paradoxdCTL" //not more than 15 
+
 
 #define paradoxRX  13
 #define paradoxTX  15
@@ -435,6 +437,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 byte getPanelCommand(String data){
   byte retval=0x00;
+
   data.toLowerCase();
   if (data == "stay" || data=="0")
   {
@@ -442,24 +445,30 @@ byte getPanelCommand(String data){
     retval = Stay_Arm;
     
   }
+
   else if (data == "arm" || data=="1")
   {    
     retval= Full_Arm;
   }
   else if (data == "sleep" || data=="2")
+
   {
     
     retval= Sleep_Arm;
     
   }
+
   else if (data == "disarm" || data == "3")
+
   {
     
     retval=Disarm;
     
   }
 
+
   else if (data == "bypass" || data == "10")
+
   {
     
     retval=Bypass;
@@ -488,6 +497,7 @@ byte getPanelCommand(String data){
     retval=0x92;
     
   }
+
   else if (data == "disconnect" || data == "99")
   {
     retval=0x00;
