@@ -1,9 +1,4 @@
 # ParadoxRs232toMqtt
-First stable test version of v2 is ready https://github.com/maragelis/ParadoxRs232toMqtt/tree/test
-
-Feel free to test the test branch, and contribute to dev branch.
-
-
 
 This project uses a wemos esp8266 to read events of the serial bus of any Paradox alarm system and send it to Mqtt
 
