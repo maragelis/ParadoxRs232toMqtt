@@ -77,7 +77,7 @@ Command can be one of the following
 	
   if arm,sleep,disarm subcomand is partition<br> 
 	
-  if bypass subcomand is zone (0-31) <br> 
+  if bypass subcomand is zone subcomand is zone number from 0 to 31 <br> 
   
   if panelstatus subcomand 0 = panel data <br> 
   		 subcomand 1 = panel voltage and battery data <br> 	
