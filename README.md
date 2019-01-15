@@ -79,11 +79,11 @@ Command can be one of the following
 	
   if bypass subcomand is zone (0-31) <br> 
   
-  if panelstatus subcomand 0 panel data <br> 
-  		 subcomand 1 panel voltage and battery data <br> 	
-  all others send 0<br> 
-  
+  if panelstatus subcomand 0 = panel data <br> 
+  		 subcomand 1 = panel voltage and battery data <br> 	
  
+  
+<br>
 <br> 
   
 20190114 V2 Live (Homeassistant)
