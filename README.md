@@ -45,11 +45,21 @@ paradoxdCTL/status/Arm   <- Arm status message
 
 paradoxdCTL/status/Zone  <- Zone status messages
 
+<br>HomeAssistant mqtt topics<br>
+
+paradoxdCTL/out/zoneX where x is zone number from 1-32
+
+paradoxdCTL/out/zoneX gives values ON and OFF
+
+paradoxdCTL/out/state gives values:
+
+disarmed<br>
+armed_home<br>
+armed_away<br>
+triggered<br>
 <br> 
 
-json template 
-
-
+json Command payload template <br>
 {
  "password":"1234",
  "Command":"arm",
