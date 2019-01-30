@@ -95,6 +95,8 @@ Command can be one of the following
   
 <br>
 <br> 
+
+20190130 added PGM support (command "PGM_ON" subcomand "0-31)
   
 20190114 V2 Live (Homeassistant)
 
