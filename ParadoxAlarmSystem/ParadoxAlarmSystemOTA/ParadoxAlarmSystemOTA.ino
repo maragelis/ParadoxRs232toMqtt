@@ -19,10 +19,6 @@
 
 #define Hostname          "paradoxdCTL" //not more than 15 
 
-
-#define paradoxRX  13
-#define paradoxTX  15
-
 #define Stay_Arm  0x01
 #define Stay_Arm2 0x02
 #define Sleep_Arm 0x03
@@ -35,9 +31,9 @@
 #define MessageLength 37
 
 #define LED LED_BUILTIN
+#define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 
-
-#define Hassio 1
+#define Hassio 1  // 1 enables 0 disables HAssio support
 bool TRACE = 0;
 bool OTAUpdate = 0;
 
@@ -52,7 +48,6 @@ const char *root_topicZoneStatus = "paradoxdCTL/status/Zone";
 WiFiClient espClient;
 // client parameters
 PubSubClient client(espClient);
-//SoftwareSerial paradoxSerial(paradoxRX, paradoxTX, false ,256);
 
 bool shouldSaveConfig = false;
 bool ResetConfig = false;
@@ -100,7 +95,10 @@ void setup() {
   
   Serial.begin(9600);
   Serial.flush(); // Clean up the serial buffer in case previous junk is there
-  Serial.swap();
+  if (Serial_Swap)
+  {
+    Serial.swap();
+  }
 
   Serial1.begin(9600);
   Serial1.flush();
