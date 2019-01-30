@@ -29,6 +29,8 @@
 #define Full_Arm 0x04
 #define Disarm  0x05
 #define Bypass 0x10
+#define PGMon 0x32
+#define PGMoff 0x33
 
 #define MessageLength 37
 
@@ -37,6 +39,7 @@
 
 #define Hassio 1
 bool TRACE = 0;
+bool OTAUpdate = 0;
 
 
 const char *root_topicOut = "paradoxdCTL/out";
@@ -134,6 +137,16 @@ void loop() {
   
 
 }
+
+byte checksumCalculate(byte checksum) 
+{
+  while (checksum > 255) {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  return checksum & 0xFF;
+}
+
 void StartSSDP()
 {
   if (WiFi.waitForConnectResult() == WL_CONNECTED) {
@@ -271,6 +284,8 @@ void readSerialQuick(){
   while (Serial.available()<37  )  
      { 
       //client.loop();
+      yield();
+
       }                            
     
      { 
@@ -282,9 +297,13 @@ void readSerialQuick(){
 void readSerial(){
   while (Serial.available()<37  )  
      { 
-      ArduinoOTA.handle();
-      client.loop();
-      HTTP.handleClient();
+       if (OTAUpdate)
+       {
+        ArduinoOTA.handle();
+       }
+        client.loop();
+        HTTP.handleClient();
+        yield();
       
      }                            
     
@@ -373,6 +392,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
     TRACE=0;
     Serial1.println("Trace is OFF");
     return ;
+  }
+  else if (callbackstring == "OTA=0")
+  {
+      OTAUpdate=0;
+      Serial1.println("OTA update is OFF");
+  }
+  else if (callbackstring == "OTA=1")
+  {
+    OTAUpdate=1;
+      Serial1.println("OTA update is ON");
   }
   else if (callbackstring=="")
   {
@@ -478,6 +507,16 @@ byte getPanelCommand(String data){
     
   }
 
+  else if (data == "pgm_on" || data == "pgmon")
+  {
+    retval = PGMon;
+  }
+
+  else if (data == "pgm_off" || data == "pgmoff")
+  {
+    retval = PGMoff;
+  }
+
   else if (data == "panelstatus" )
   {
     retval=0x90;
@@ -539,12 +578,7 @@ void panelSetDate(){
     checksum += data[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
-
-  data[36] = checksum & 0xFF;
+  data[36] = checksumCalculate(checksum);
 
   Serial.write(data, MessageLength);
   
@@ -571,12 +605,9 @@ void ControlPanel(inPayload data){
     checksum += armdata[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  armdata[36] = checksum & 0xFF;
+  armdata[36] = checksumCalculate(checksum);
   
   
   while (Serial.available()>37)
@@ -616,12 +647,9 @@ void PanelDisconnect(){
     checksum += data[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  data[36] = checksum & 0xFF;
+  data[36] = checksumCalculate(checksum);
 
   Serial.write(data, MessageLength);
   
@@ -650,12 +678,9 @@ void PanelStatus0(bool showonlyZone ,int zone)
     checksum += data[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  data[36] = checksum & 0xFF;
+  data[36] = checksumCalculate(checksum);
 
   Serial.write(data, MessageLength);
   
@@ -734,12 +759,9 @@ void PanelStatus1(bool ShowOnlyState)
     checksum += data[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  data[36] = checksum & 0xFF;
+  data[36] = checksumCalculate(checksum);
 
   Serial.write(data, MessageLength);
 
@@ -838,12 +860,9 @@ void doLogin(byte pass1, byte pass2){
     checksum += data[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  data[36] = checksum & 0xFF;
+  data[36] = checksumCalculate(checksum);
 
   if (TRACE)
   {
@@ -890,12 +909,9 @@ void doLogin(byte pass1, byte pass2){
       {
         checksum += data1[x];
       }
-      while (checksum > 255)
-      {
-        checksum = checksum - (checksum / 256) * 256;
-      }
+      
 
-      data1[36] = checksum & 0xFF;
+      data1[36] = checksumCalculate(checksum);
 
       if (TRACE)
       {
