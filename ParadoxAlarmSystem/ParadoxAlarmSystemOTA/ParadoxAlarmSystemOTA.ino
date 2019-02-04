@@ -10,8 +10,7 @@
 #include <PubSubClient.h>
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
-
-
+#include <NTPtimeESP.h>
 
 
 #define mqtt_server       "192.168.4.225"
@@ -19,25 +18,25 @@
 
 #define Hostname          "paradoxdCTL" //not more than 15 
 
-
-#define paradoxRX  13
-#define paradoxTX  15
-
 #define Stay_Arm  0x01
 #define Stay_Arm2 0x02
 #define Sleep_Arm 0x03
 #define Full_Arm 0x04
 #define Disarm  0x05
 #define Bypass 0x10
+#define PGMon 0x32
+#define PGMoff 0x33
 
 #define MessageLength 37
 
 #define LED LED_BUILTIN
+#define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 
-
-#define Hassio 1
+#define Hassio 1  // 1 enables 0 disables HAssio support
 bool TRACE = 0;
+bool OTAUpdate = 0;
 
+NTPtime NTPch("gr.pool.ntp.org");
 
 const char *root_topicOut = "paradoxdCTL/out";
 const char *root_topicStatus = "paradoxdCTL/status";
@@ -49,7 +48,6 @@ const char *root_topicZoneStatus = "paradoxdCTL/status/Zone";
 WiFiClient espClient;
 // client parameters
 PubSubClient client(espClient);
-//SoftwareSerial paradoxSerial(paradoxRX, paradoxTX, false ,256);
 
 bool shouldSaveConfig = false;
 bool ResetConfig = false;
@@ -57,11 +55,6 @@ bool PannelConnected =false;
 bool PanelError = false;
 bool RunningCommand=false;
 bool JsonParseError=false;
-
-unsigned long lastReconnectAttempt = 0UL;
-unsigned long ul_Interval = 5000UL;
-
-
  
 char inData[38]; // Allocate some space for the string
 char outData[38];
@@ -97,7 +90,10 @@ void setup() {
   
   Serial.begin(9600);
   Serial.flush(); // Clean up the serial buffer in case previous junk is there
-  Serial.swap();
+  if (Serial_Swap)
+  {
+    Serial.swap();
+  }
 
   Serial1.begin(9600);
   Serial1.flush();
@@ -118,7 +114,6 @@ void setup() {
   ArduinoOTA.begin();
   trc("Finnished wifi setup");
   delay(1500);
-  lastReconnectAttempt = 0;
   digitalWrite(LED, HIGH);
 }
 
@@ -134,6 +129,17 @@ void loop() {
   
 
 }
+
+
+byte checksumCalculate(byte checksum) 
+{
+  while (checksum > 255) {
+    checksum = checksum - (checksum / 256) * 256;
+  }
+
+  return checksum & 0xFF;
+}
+
 void StartSSDP()
 {
   if (WiFi.waitForConnectResult() == WL_CONNECTED) {
@@ -239,22 +245,7 @@ void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
 }
 
 void sendMQTT(String topicNameSend, String dataStr){
-  if (!client.connected()) {
-    unsigned long now = millis();
-    if (now - lastReconnectAttempt > ul_Interval) {
-      lastReconnectAttempt = now;
-      trc("client mqtt not connected, trying to connect");
-      // Attempt to reconnect
-      if (reconnect()) {
-        lastReconnectAttempt = 0UL;
-      }
-    }
-  } 
-  else {
-    // MQTT loop
-    
-    client.loop();
- }
+    handleMqttKeepAlive();
     char topicStrSend[26];
     topicNameSend.toCharArray(topicStrSend,26);
     char dataStrSend[200];
@@ -267,43 +258,33 @@ void sendMQTT(String topicNameSend, String dataStr){
 
 }
 
-void readSerialQuick(){
-  while (Serial.available()<37  )  
-     { 
-      //client.loop();
-      }                            
-    
-     { 
-       readSerialData();
-     }
 
-}
 
 void readSerial(){
   while (Serial.available()<37  )  
      { 
-      ArduinoOTA.handle();
-      client.loop();
-      HTTP.handleClient();
+          if (OTAUpdate)
+          {
+            ArduinoOTA.handle();
+          }
+        handleMqttKeepAlive();
+        HTTP.handleClient();
+        yield();
       
      }                            
-    
      {
-       
        readSerialData();       
      }
 
 }
 
 void readSerialData() {
- 
-    
-     
-        pindex=0;
+         pindex=0;
         
         while(pindex < 37) // Paradox packet is 37 bytes 
         {
-            inData[pindex++]=Serial.read();            
+            inData[pindex++]=Serial.read();  
+            yield();          
         }
        
             inData[++pindex]=0x00; // Make it print-friendly
@@ -374,6 +355,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial1.println("Trace is OFF");
     return ;
   }
+  else if (callbackstring == "OTA=0")
+  {
+      OTAUpdate=0;
+      Serial1.println("OTA update is OFF");
+  }
+  else if (callbackstring == "OTA=1")
+  {
+    OTAUpdate=1;
+      Serial1.println("OTA update is ON");
+  }
   else if (callbackstring=="")
   {
     trc("No payload data");
@@ -417,10 +408,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   }
   else if (data.Command == 0x91  )  {
+    trc("Running ArmState");
+    ArmState();
+  }
+  else if (data.Command == 0x30)
+  {
     trc("Running Setdate");
-      ArmState();
-  } 
-   else if (data.Command == 0x92  )  {
+    panelSetDate();
+  }
+  else if (data.Command == 0x92)
+  {
     trc("Running ZoneState");
       ZoneState(data.Subcommand);
   } 
@@ -478,6 +475,16 @@ byte getPanelCommand(String data){
     
   }
 
+  else if (data == "pgm_on" || data == "pgmon")
+  {
+    retval = PGMon;
+  }
+
+  else if (data == "pgm_off" || data == "pgmoff")
+  {
+    retval = PGMoff;
+  }
+
   else if (data == "panelstatus" )
   {
     retval=0x90;
@@ -487,7 +494,7 @@ byte getPanelCommand(String data){
 
   else if (data == "setdate")
   {
-    retval=0x89;
+    retval=0x30;
     
   }
   else if (data == "armstate")
@@ -517,37 +524,44 @@ byte getPanelCommand(String data){
 
 
 void panelSetDate(){
-  byte data[MessageLength] = {};
-  byte checksum;
-   for (int x = 0; x < MessageLength; x++)
+
+  strDateTime dateTime;
+  dateTime = NTPch.getNTPtime(2.0, 1);
+  if (dateTime.valid)
   {
-    data[x] = 0x00;
-  }
-
-  data[0] = 0x30;
-  data[4] = 0x21;
-  data[5] = 0x18;
-  data[6] = 0x05;
-  data[7] = 0x05;
-  data[8] = 0x13;
-  data[9] = 0x22;
-  data[33] = 0x05;
-
-   checksum = 0;
-  for (int x = 0; x < MessageLength - 1; x++)
-  {
-    checksum += data[x];
-  }
-
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
-
-  data[36] = checksum & 0xFF;
-
-  Serial.write(data, MessageLength);
+    
+    byte actualHour = dateTime.hour;
+    byte actualMinute = dateTime.minute;
+    byte actualyear = (dateTime.year - 2000) & 0xFF ;
+    byte actualMonth = dateTime.month;
+    byte actualday = dateTime.day;
   
+
+    byte data[MessageLength] = {};
+    byte checksum;
+    memset(data, 0, sizeof(data));
+
+    data[0] = 0x30;
+    data[4] = 0x21;         //Century
+    data[5] = actualyear;   //Year
+    data[6] = actualMonth;  //Month
+    data[7] = actualday;    //Day
+    data[8] = actualHour;   //Time
+    data[9] = actualMinute; // Minutes
+    data[33] = 0x05;
+
+    checksum = 0;
+    for (int x = 0; x < MessageLength - 1; x++)
+    {
+      checksum += data[x];
+    }
+
+    data[36] = checksumCalculate(checksum);
+
+    Serial.write(data, MessageLength);
+    sendMQTT(root_topicStatus,"setDate Success");
+  }
+   sendMQTT(root_topicStatus,"setDate invalid");
 }
 
 
@@ -571,12 +585,9 @@ void ControlPanel(inPayload data){
     checksum += armdata[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  armdata[36] = checksum & 0xFF;
+  armdata[36] = checksumCalculate(checksum);
   
   
   while (Serial.available()>37)
@@ -587,7 +598,7 @@ void ControlPanel(inPayload data){
 
   trc("sending Data");
   Serial.write(armdata, MessageLength);
-  readSerialQuick();
+  readSerial();
 
   if ( inData[0]  >= 40 && inData[0] <= 45)
   {
@@ -616,12 +627,9 @@ void PanelDisconnect(){
     checksum += data[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  data[36] = checksum & 0xFF;
+  data[36] = checksumCalculate(checksum);
 
   Serial.write(data, MessageLength);
   
@@ -650,16 +658,13 @@ void PanelStatus0(bool showonlyZone ,int zone)
     checksum += data[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  data[36] = checksum & 0xFF;
+  data[36] = checksumCalculate(checksum);
 
   Serial.write(data, MessageLength);
   
-  readSerialQuick();
+  readSerial();
 
     bool Timer_Loss = bitRead(inData[4],7);
     bool PowerTrouble  = bitRead(inData[4],1);
@@ -734,16 +739,13 @@ void PanelStatus1(bool ShowOnlyState)
     checksum += data[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  data[36] = checksum & 0xFF;
+  data[36] = checksumCalculate(checksum);
 
   Serial.write(data, MessageLength);
 
-    readSerialQuick();
+    readSerial();
 
   bool Fire=bitRead(inData[17],7);
   bool Audible=bitRead(inData[17],6);
@@ -818,7 +820,12 @@ void doLogin(byte pass1, byte pass2){
   byte data[MessageLength] = {};
   byte data1[MessageLength] = {};
   byte checksum;
-
+if (TRACE)
+{
+  sendMQTT(root_topicStatus,"Running doLogin Function");
+  
+  sendMQTT(root_topicStatus,String(pass1) + String(pass2));
+}
   for (int x = 0; x < MessageLength; x++)
   {
       data[x]=0x00;
@@ -838,12 +845,9 @@ void doLogin(byte pass1, byte pass2){
     checksum += data[x];
   }
 
-  while (checksum > 255)
-  {
-    checksum = checksum - (checksum / 256) * 256;
-  }
+  
 
-  data[36] = checksum & 0xFF;
+  data[36] = checksumCalculate(checksum);
 
   if (TRACE)
   {
@@ -858,16 +862,21 @@ void doLogin(byte pass1, byte pass2){
    
     Serial.write(data, MessageLength);
     
-    readSerialQuick();
+    readSerial();
     if (TRACE)
     {
        for (int x = 0; x < MessageLength; x++)
        {
-         Serial1.print("replAddress-");
-         Serial1.print(x);
-         Serial1.print("=");
-         Serial1.println(inData[x], HEX);
+         //Serial1.print("replAddress-");
+         //Serial1.print(x);
+         //Serial1.print("=");
+         //Serial1.println(inData[x], HEX);
+         
        }
+       
+       sendMQTT(root_topicStatus, "LOGIN RETURN" + String(inData[4], HEX));
+       
+      
     }
       data1[0] = 0x00;
       data1[4] = inData[4];
@@ -890,12 +899,9 @@ void doLogin(byte pass1, byte pass2){
       {
         checksum += data1[x];
       }
-      while (checksum > 255)
-      {
-        checksum = checksum - (checksum / 256) * 256;
-      }
+      
 
-      data1[36] = checksum & 0xFF;
+      data1[36] = checksumCalculate(checksum);
 
       if (TRACE)
       {
@@ -979,9 +985,17 @@ struct inPayload Decodejson(char *Payload){
   unsigned long number2 = strtoul(charpass2, nullptr, 16);
   unsigned long number3 = strtoul(charsubcommand, nullptr, 16);
 
+  if (number2 < 10)
+    number2 = number2 + 160;
+
+  if (number1 < 10)
+    number1 = number1 + 160;
+
   byte PanelPassword1 = number1 & 0xFF; 
   byte PanelPassword2 = number2 & 0xFF; 
   byte SubCommand = number3 & 0xFF;
+
+
 
   byte CommandB = getPanelCommand(command) ;
 
@@ -1115,10 +1129,6 @@ boolean reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
     trc("Attempting MQTT connection...");
-    // Attempt to connect
-    // If you  want to use a username and password, uncomment next line and comment the line if (client.connect("433toMQTTto433")) {
-    //if (client.connect("433toMQTTto433", mqtt_user, mqtt_password)) {
-    // and set username and password at the program beginning
     String mqname =  WiFi.macAddress();
     char charBuf[50];
     mqname.toCharArray(charBuf, 50) ;
@@ -1141,6 +1151,15 @@ boolean reconnect() {
     }
   }
   return client.connected();
+}
+
+void handleMqttKeepAlive()
+{
+  if (!client.connected())
+  {
+    reconnect();
+  }
+  client.loop();
 }
 
 void subscribing(String topicNameRec){ // MQTT subscribing to topic

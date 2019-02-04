@@ -1,9 +1,4 @@
 # ParadoxRs232toMqtt
-First stable test version of v2 is ready https://github.com/maragelis/ParadoxRs232toMqtt/tree/test
-
-Feel free to test the test branch, and contribute to dev branch.
-
-
 
 This project uses a wemos esp8266 to read events of the serial bus of any Paradox alarm system and send it to Mqtt
 
@@ -12,22 +7,31 @@ This project uses a wemos esp8266 to read events of the serial bus of any Parado
   paradoxTX gpio15 wemos d8 
   paradoxRX gpio13 wemos d7
 	
-  Debug messages can be read through usb on the wemos.
+  Debug messages can be read through usb on the wemos.<br> 
+  
+<br> Arduino IDE settings<br>
+
+Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 128<br>
+Libs <br>
+wifimanager<br>
+pubsubclient<br>
+arduinojson<br>
 
 
-Set Hassio flag to 1 for Home assistant see wiki (Home Assistant in V2)
+Set Hassio flag to 1 for Home assistant see wiki (Home Assistant in V2)<br> 
 
         
         
 The 37 byte message is broken down into a json message with "Event Group" and "Sub-group" 
 
-and one more dummy attribute which is the zone/partition label.
+and one more dummy attribute which is the zone/partition label.<br> 
 
-SOS Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 128
 
-See wiki for more info on Groups and sub groups 
+
+See wiki for more info on Groups and sub groups <br> 
 
 After flashing the wemos connect to its wifi, (paradoxdCTL), go to page 192.168.4.1 give it your wifi credentials and MQtt server address. Thats it  
+<br> 
 
 Mqtt topics 
 
@@ -41,43 +45,60 @@ paradoxdCTL/status/Arm   <- Arm status message
 
 paradoxdCTL/status/Zone  <- Zone status messages
 
+<br>HomeAssistant mqtt topics<br>
 
+paradoxdCTL/out/zoneX where x is zone number from 1-32
 
-json template 
+paradoxdCTL/out/zoneX gives values ON and OFF
 
+paradoxdCTL/out/state gives values:
 
+disarmed<br>
+armed_home<br>
+armed_away<br>
+triggered<br>
+<br> 
+
+json Command payload template <br>
 {
  "password":"1234",
  "Command":"arm",
  "Subcommand":"0"
 }
 
+<br> 
+
 password is user 4 digit password
 
 Command can be one of the following 
 
 
-  arm,
-  disarm,
-  sleep,
-  stay,
-  bypass,
-  armstate,
-  zonestate,
-  panelstatus (* causes some problems still looking into it )
+  arm,<br> 
+  disarm,<br> 
+  sleep,<br> 
+  stay,<br> 
+  bypass,<br> 
+  armstate,<br> 
+  zonestate,<br> 
+  panelstatus <br> 
 	
   
-  subcomand depends on command ,
+  subcomand depends on command ,<br> 
 	
-  if arm,sleep,disarm subcomand is partition
+  if Command is arm,sleep,disarm subcomand is partition<br> 
 	
-  if bypass subcomand is zone (0-31) 
+  if Command is bypass subcomand is zone number from 0 to 31 <br> 
   
-  if panelstatus subcomand 0 panel data 
-  		 subcomand 1 panel voltage and battery data 	
-  all others send 0
+  if Command is panelstatus subcomand 0 = panel data <br> 
+  		or subcomand 1 = panel voltage and battery data <br> 	
+ 
   
+<br>
+<br> 
 
+20190130 added PGM support (command "PGM_ON" subcomand "0-31)
+  
+20190114 V2 Live (Homeassistant)
 
 20190104 Added wiki Node-red v2 flow 
 
