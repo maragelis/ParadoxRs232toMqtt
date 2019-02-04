@@ -802,7 +802,12 @@ void doLogin(byte pass1, byte pass2){
   byte data[MessageLength] = {};
   byte data1[MessageLength] = {};
   byte checksum;
-
+if (TRACE)
+{
+  sendMQTT(root_topicStatus,"Running doLogin Function");
+  
+  sendMQTT(root_topicStatus,String(pass1) + String(pass2));
+}
   for (int x = 0; x < MessageLength; x++)
   {
       data[x]=0x00;
@@ -842,17 +847,18 @@ void doLogin(byte pass1, byte pass2){
     readSerial();
     if (TRACE)
     {
-       String messageret = "LOGIN RETURN ";
        for (int x = 0; x < MessageLength; x++)
        {
-         messageret = messageret + "replAddress-" + String(x) + " value:" + String(inData[x]);
-         Serial1.print("replAddress-");
-         Serial1.print(x);
-         Serial1.print("=");
-         Serial1.println(inData[x], HEX);
+         //Serial1.print("replAddress-");
+         //Serial1.print(x);
+         //Serial1.print("=");
+         //Serial1.println(inData[x], HEX);
          
        }
-       sendMQTT(root_topicStatus, messageret);
+       
+       sendMQTT(root_topicStatus, "LOGIN RETURN" + String(inData[4], HEX));
+       
+      
     }
       data1[0] = 0x00;
       data1[4] = inData[4];
