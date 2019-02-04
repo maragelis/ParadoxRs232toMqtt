@@ -34,7 +34,7 @@
 #define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 
 #define Hassio 1  // 1 enables 0 disables HAssio support
-bool TRACE = 0;
+bool TRACE = 1;
 bool OTAUpdate = 0;
 
 
