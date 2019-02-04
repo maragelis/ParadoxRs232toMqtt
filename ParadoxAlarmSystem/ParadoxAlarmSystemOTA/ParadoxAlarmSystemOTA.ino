@@ -10,8 +10,7 @@
 #include <PubSubClient.h>
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
-
-
+#include <NTPtimeESP.h>
 
 
 #define mqtt_server       "192.168.4.225"
@@ -34,9 +33,10 @@
 #define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 
 #define Hassio 1  // 1 enables 0 disables HAssio support
-bool TRACE = 1;
+bool TRACE = 0;
 bool OTAUpdate = 0;
 
+NTPtime NTPch("gr.pool.ntp.org");
 
 const char *root_topicOut = "paradoxdCTL/out";
 const char *root_topicStatus = "paradoxdCTL/status";
@@ -408,10 +408,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   }
   else if (data.Command == 0x91  )  {
+    trc("Running ArmState");
+    ArmState();
+  }
+  else if (data.Command == 0x30)
+  {
     trc("Running Setdate");
-      ArmState();
-  } 
-   else if (data.Command == 0x92  )  {
+    panelSetDate();
+  }
+  else if (data.Command == 0x92)
+  {
     trc("Running ZoneState");
       ZoneState(data.Subcommand);
   } 
@@ -488,7 +494,7 @@ byte getPanelCommand(String data){
 
   else if (data == "setdate")
   {
-    retval=0x89;
+    retval=0x30;
     
   }
   else if (data == "armstate")
@@ -518,32 +524,44 @@ byte getPanelCommand(String data){
 
 
 void panelSetDate(){
-  byte data[MessageLength] = {};
-  byte checksum;
-   for (int x = 0; x < MessageLength; x++)
+
+  strDateTime dateTime;
+  dateTime = NTPch.getNTPtime(2.0, 1);
+  if (dateTime.valid)
   {
-    data[x] = 0x00;
-  }
-
-  data[0] = 0x30;
-  data[4] = 0x21;
-  data[5] = 0x18;
-  data[6] = 0x05;
-  data[7] = 0x05;
-  data[8] = 0x13;
-  data[9] = 0x22;
-  data[33] = 0x05;
-
-   checksum = 0;
-  for (int x = 0; x < MessageLength - 1; x++)
-  {
-    checksum += data[x];
-  }
-
-  data[36] = checksumCalculate(checksum);
-
-  Serial.write(data, MessageLength);
+    
+    byte actualHour = dateTime.hour;
+    byte actualMinute = dateTime.minute;
+    byte actualyear = (dateTime.year - 2000) & 0xFF ;
+    byte actualMonth = dateTime.month;
+    byte actualday = dateTime.day;
   
+
+    byte data[MessageLength] = {};
+    byte checksum;
+    memset(data, 0, sizeof(data));
+
+    data[0] = 0x30;
+    data[4] = 0x21;         //Century
+    data[5] = actualyear;   //Year
+    data[6] = actualMonth;  //Month
+    data[7] = actualday;    //Day
+    data[8] = actualHour;   //Time
+    data[9] = actualMinute; // Minutes
+    data[33] = 0x05;
+
+    checksum = 0;
+    for (int x = 0; x < MessageLength - 1; x++)
+    {
+      checksum += data[x];
+    }
+
+    data[36] = checksumCalculate(checksum);
+
+    Serial.write(data, MessageLength);
+    sendMQTT(root_topicStatus,"setDate Success");
+  }
+   sendMQTT(root_topicStatus,"setDate invalid");
 }
 
 
@@ -967,9 +985,17 @@ struct inPayload Decodejson(char *Payload){
   unsigned long number2 = strtoul(charpass2, nullptr, 16);
   unsigned long number3 = strtoul(charsubcommand, nullptr, 16);
 
+  if (number2 < 10)
+    number2 = number2 + 160;
+
+  if (number1 < 10)
+    number1 = number1 + 160;
+
   byte PanelPassword1 = number1 & 0xFF; 
   byte PanelPassword2 = number2 & 0xFF; 
   byte SubCommand = number3 & 0xFF;
+
+
 
   byte CommandB = getPanelCommand(command) ;
 
