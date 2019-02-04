@@ -842,13 +842,17 @@ void doLogin(byte pass1, byte pass2){
     readSerial();
     if (TRACE)
     {
+       String messageret = "LOGIN RETURN ";
        for (int x = 0; x < MessageLength; x++)
        {
+         messageret = messageret + "replAddress-" + String(x) + " value:" + String(inData[x]);
          Serial1.print("replAddress-");
          Serial1.print(x);
          Serial1.print("=");
          Serial1.println(inData[x], HEX);
+         
        }
+       sendMQTT(root_topicStatus, messageret);
     }
       data1[0] = 0x00;
       data1[4] = inData[4];
