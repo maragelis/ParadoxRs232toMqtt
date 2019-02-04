@@ -55,11 +55,6 @@ bool PannelConnected =false;
 bool PanelError = false;
 bool RunningCommand=false;
 bool JsonParseError=false;
-
-unsigned long lastReconnectAttempt = 0UL;
-unsigned long ul_Interval = 5000UL;
-
-
  
 char inData[38]; // Allocate some space for the string
 char outData[38];
@@ -119,7 +114,6 @@ void setup() {
   ArduinoOTA.begin();
   trc("Finnished wifi setup");
   delay(1500);
-  lastReconnectAttempt = 0;
   digitalWrite(LED, HIGH);
 }
 
@@ -135,6 +129,7 @@ void loop() {
   
 
 }
+
 
 byte checksumCalculate(byte checksum) 
 {
@@ -250,22 +245,7 @@ void SendJsonString(byte armstatus, byte event,byte sub_event  ,String dummy)
 }
 
 void sendMQTT(String topicNameSend, String dataStr){
-  if (!client.connected()) {
-    unsigned long now = millis();
-    if (now - lastReconnectAttempt > ul_Interval) {
-      lastReconnectAttempt = now;
-      trc("client mqtt not connected, trying to connect");
-      // Attempt to reconnect
-      if (reconnect()) {
-        lastReconnectAttempt = 0UL;
-      }
-    }
-  } 
-  else {
-    // MQTT loop
-    
-    client.loop();
- }
+    handleMqttKeepAlive();
     char topicStrSend[26];
     topicNameSend.toCharArray(topicStrSend,26);
     char dataStrSend[200];
@@ -278,49 +258,33 @@ void sendMQTT(String topicNameSend, String dataStr){
 
 }
 
-void readSerialQuick(){
-  while (Serial.available()<37  )  
-     { 
-      //client.loop();
-      yield();
 
-      }                            
-    
-     { 
-       readSerialData();
-     }
-
-}
 
 void readSerial(){
   while (Serial.available()<37  )  
      { 
-       if (OTAUpdate)
-       {
-        ArduinoOTA.handle();
-       }
-        client.loop();
+          if (OTAUpdate)
+          {
+            ArduinoOTA.handle();
+          }
+        handleMqttKeepAlive();
         HTTP.handleClient();
         yield();
       
      }                            
-    
      {
-       
        readSerialData();       
      }
 
 }
 
 void readSerialData() {
- 
-    
-     
-        pindex=0;
+         pindex=0;
         
         while(pindex < 37) // Paradox packet is 37 bytes 
         {
-            inData[pindex++]=Serial.read();            
+            inData[pindex++]=Serial.read();  
+            yield();          
         }
        
             inData[++pindex]=0x00; // Make it print-friendly
@@ -616,7 +580,7 @@ void ControlPanel(inPayload data){
 
   trc("sending Data");
   Serial.write(armdata, MessageLength);
-  readSerialQuick();
+  readSerial();
 
   if ( inData[0]  >= 40 && inData[0] <= 45)
   {
@@ -682,7 +646,7 @@ void PanelStatus0(bool showonlyZone ,int zone)
 
   Serial.write(data, MessageLength);
   
-  readSerialQuick();
+  readSerial();
 
     bool Timer_Loss = bitRead(inData[4],7);
     bool PowerTrouble  = bitRead(inData[4],1);
@@ -763,7 +727,7 @@ void PanelStatus1(bool ShowOnlyState)
 
   Serial.write(data, MessageLength);
 
-    readSerialQuick();
+    readSerial();
 
   bool Fire=bitRead(inData[17],7);
   bool Audible=bitRead(inData[17],6);
@@ -875,7 +839,7 @@ void doLogin(byte pass1, byte pass2){
    
     Serial.write(data, MessageLength);
     
-    readSerialQuick();
+    readSerial();
     if (TRACE)
     {
        for (int x = 0; x < MessageLength; x++)
@@ -1129,10 +1093,6 @@ boolean reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
     trc("Attempting MQTT connection...");
-    // Attempt to connect
-    // If you  want to use a username and password, uncomment next line and comment the line if (client.connect("433toMQTTto433")) {
-    //if (client.connect("433toMQTTto433", mqtt_user, mqtt_password)) {
-    // and set username and password at the program beginning
     String mqname =  WiFi.macAddress();
     char charBuf[50];
     mqname.toCharArray(charBuf, 50) ;
@@ -1155,6 +1115,15 @@ boolean reconnect() {
     }
   }
   return client.connected();
+}
+
+void handleMqttKeepAlive()
+{
+  if (!client.connected())
+  {
+    reconnect();
+  }
+  client.loop();
 }
 
 void subscribing(String topicNameRec){ // MQTT subscribing to topic
