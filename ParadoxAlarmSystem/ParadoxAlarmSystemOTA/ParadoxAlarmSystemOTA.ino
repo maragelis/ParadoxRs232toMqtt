@@ -1,5 +1,5 @@
 #include <FS.h>   
-#include <SoftwareSerial.h>
+//#include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266SSDP.h>
@@ -33,16 +33,18 @@
 #define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 
 #define Hassio 1  // 1 enables 0 disables HAssio support
+
+
 bool TRACE = 0;
 bool OTAUpdate = 0;
 
 NTPtime NTPch("gr.pool.ntp.org");
 
-const char *root_topicOut = "paradoxdCTL/out";
-const char *root_topicStatus = "paradoxdCTL/status";
-const char *root_topicIn = "paradoxdCTL/in";
-const char *root_topicArmStatus = "paradoxdCTL/status/Arm";
-const char *root_topicZoneStatus = "paradoxdCTL/status/Zone";
+ char *root_topicOut = "paradoxdCTL/out";
+ char *root_topicStatus = "paradoxdCTL/status";
+ char *root_topicIn = "paradoxdCTL/in";
+ char *root_topicArmStatus = "paradoxdCTL/status/Arm";
+ char *root_topicZoneStatus = "paradoxdCTL/status/Zone";
 //root_topicArmStatus
 
 WiFiClient espClient;
@@ -59,7 +61,9 @@ bool JsonParseError=false;
 char inData[38]; // Allocate some space for the string
 char outData[38];
 byte pindex = 0; // Index into array; where to store the character
- 
+
+
+
 ESP8266WebServer HTTP(80);
 
 struct inPayload
@@ -79,7 +83,9 @@ typedef struct {
   
  Payload paradox;
 
- 
+StaticJsonBuffer<256> jsonBuffer;
+JsonObject& root = jsonBuffer.createObject();
+//JsonObject& zones = root.createNestedObject("zones");
 
 void setup() {
   pinMode(LED, OUTPUT);
@@ -118,12 +124,11 @@ void setup() {
 }
 
 void loop() {
-  
+   handleMqttKeepAlive();
    readSerial();
         
    if ( (inData[0] & 0xF0)!=0xE0){ // re-align serial buffer
-    
-    
+       
     serial_flush_buffer();
   }
   
@@ -258,7 +263,20 @@ void sendMQTT(String topicNameSend, String dataStr){
 
 }
 
+void sendCharMQTT(char* topic, char* data)
+{
+  handleMqttKeepAlive();
+  
+  boolean pubresult = client.publish(topic, data);
+  
+}
 
+void sendJson(){
+  char output[256];
+
+  root.printTo(output);
+  sendCharMQTT(root_topicStatus,output);  
+}
 
 void readSerial(){
   while (Serial.available()<37  )  
@@ -304,6 +322,7 @@ void readSerialData() {
                   PannelConnected = false;
                   trc("panel logout");
                    sendMQTT(root_topicStatus, "{\"status\":\"Panel logout\"}");
+                   
                 }
                 else if (inData[7] == 48 && inData[8] == 2 )
                 {
@@ -568,10 +587,7 @@ void panelSetDate(){
 void ControlPanel(inPayload data){
   byte armdata[MessageLength] = {};
   byte checksum;
-  for (int x = 0; x < MessageLength; x++)
-  {
-    armdata[x] = 0x00;
-  }
+  memset(armdata,0, sizeof(armdata));
 
   armdata[0] = 0x40;
   armdata[2] = data.Command;
@@ -612,10 +628,7 @@ void ControlPanel(inPayload data){
 void PanelDisconnect(){
   byte data[MessageLength] = {};
   byte checksum;
-  for (int x = 0; x < MessageLength; x++)
-  {
-    data[x] = 0x00;
-  }
+  memset(data, 0, sizeof(data));
 
   data[0] = 0x70;
   data[2] = 0x05;
@@ -641,10 +654,7 @@ void PanelStatus0(bool showonlyZone ,int zone)
 {
   byte data[MessageLength] = {};
   byte checksum;
-  for (int x = 0; x < MessageLength; x++)
-  {
-    data[x] = 0x00;
-  }
+  memset(data, 0, sizeof(data));
 
   serial_flush_buffer();
   data[0] = 0x50;
@@ -721,10 +731,7 @@ void PanelStatus1(bool ShowOnlyState)
 {
   byte data[MessageLength] = {};
   byte checksum;
-  for (int x = 0; x < MessageLength; x++)
-  {
-    data[x] = 0x00;
-  }
+  memset(data, 0, sizeof(data));
 
   serial_flush_buffer();
   data[0] = 0x50;
@@ -826,11 +833,8 @@ if (TRACE)
   
   sendMQTT(root_topicStatus,String(pass1) + String(pass2));
 }
-  for (int x = 0; x < MessageLength; x++)
-  {
-      data[x]=0x00;
-      data1[x]=0x00;
-  }
+  memset(data, 0, sizeof(data));
+  memset(data1, 0, sizeof(data1));
 
     serial_flush_buffer();
   data[0] = 0x5f;
