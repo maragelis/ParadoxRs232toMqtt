@@ -957,6 +957,13 @@ struct inPayload Decodejson(char *Payload){
   unsigned long number2 = strtoul(charpass2, nullptr, 16);
   unsigned long number3 = strtoul(charsubcommand, nullptr, 16);
 
+  if (number2 < 10)
+    number2 = number2 + 160;
+
+  if (number1 < 10)
+    number1 = number1 + 160;
+
+    
   byte PanelPassword1 = number1 & 0xFF; 
   byte PanelPassword2 = number2 & 0xFF; 
   byte SubCommand = number3 & 0xFF;
