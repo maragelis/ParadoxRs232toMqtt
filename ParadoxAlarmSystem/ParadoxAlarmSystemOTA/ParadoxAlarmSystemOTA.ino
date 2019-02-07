@@ -119,7 +119,7 @@ void setup() {
   delay(1000);
   WiFi.mode(WIFI_STA);
 
-  
+  Serial.setRxBufferSize(384);
   Serial.begin(9600);
   Serial.flush(); // Clean up the serial buffer in case previous junk is there
   if (Serial_Swap)
@@ -297,7 +297,7 @@ void sendArmStatus()
 }
 
 
-void SendJsonString(byte armstatus, byte event, byte sub_event, String dummy )
+void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
 {
   if ((Hassio || HomeKit) && (event == 2 || event == 6))
   {
@@ -403,7 +403,7 @@ void sendCharMQTT(char* topic, char* data)
 
 void readSerial(){
   while (Serial.available()<37  )  
-     { 
+  { 
       
       if (OTAUpdate)
       {
@@ -411,19 +411,20 @@ void readSerial(){
       }
       handleMqttKeepAlive();
       HTTP.handleClient();
-       
-       
-      
-     }                            
-     {
+      yield();
+
+  }                            
+  {
        readSerialData();       
-     }
+  }
 
 }
 
 void readSerialQ(){
   while (Serial.available()<37  )  
-     { }                            
+     {
+      yield();
+      }                            
      {
        pindex=0;
         
@@ -457,19 +458,14 @@ void readSerialData() {
                 if (inData[14]!= 1){
                 paradox.dummy = zlabel;
                 }
-                SendJsonString(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
+                processMessage(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
                 if (inData[7] == 48 && inData[8] == 3)
                 {
                   PannelConnected = false;
-                  trc("panel logout");
-                  // sendMQTT(root_topicStatus, "{\"status\":\"Panel logout\"}");
-                   
                 }
                 else if (inData[7] == 48 && inData[8] == 2 )
                 {
                   PannelConnected = true;
-                  trc("panel Login");
-                  //sendMQTT(root_topicStatus, "{\"status\":\"Panel Login Success\"}");
                 }
                 
               }else
