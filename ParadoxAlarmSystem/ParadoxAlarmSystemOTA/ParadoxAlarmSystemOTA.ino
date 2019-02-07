@@ -302,13 +302,18 @@ void SendJsonString(byte armstatus, byte event, byte sub_event, String dummy )
   if ((Hassio || HomeKit) && (event == 2 || event == 6))
   {
     updateArmStatus(); 
-    if (( homekitStatus.sent != homekitStatus.intArmStatus) )
+      
+  }   
+
+  if   ((Hassio || HomeKit) && (event == 30 || (event==2 && sub_event==11)))
+  {
+    if (( homekitStatus.sent != homekitStatus.intArmStatus)   )
     {
       sendArmStatus();
       homekitStatus.sent = homekitStatus.intArmStatus;
     }
-    
-  }    
+      
+  } 
 
   if ((Hassio ) && (event == 1 || event == 0))
   {
