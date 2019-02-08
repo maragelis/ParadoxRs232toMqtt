@@ -1,4 +1,4 @@
-char* getSubEvent(byte event, byte sub_event)
+String getSubEvent(byte event, byte sub_event)
 {
  
     switch (event)
@@ -15,67 +15,67 @@ char* getSubEvent(byte event, byte sub_event)
         switch (sub_event)
         {
           case 2:
-            return "Silent alarm";
+            return F("Silent alarm");
            break;
 
            case 3:
-            return "Buzzer alarm";
+            return F("Buzzer alarm");
            break;
 
            case 4: 
-            return "Steady alarm";
+            return F("Steady alarm");
            break;
 
            case 5:
-            return "Pulsed alarm";
+            return F("Pulsed alarm");
             break;
 
             case 6:
-             return "Strobe";
+             return F("Strobe");
             break;
 
             case 7: 
-              return "Alarm stopped";
+              return F("Alarm stopped");
               break;
 
             case 8:
-              return "Squawk ON";
+              return F("Squawk ON");
              break;
 
             case 9: 
-            return "Squawk OFF";
+            return F("Squawk OFF");
             break; 
 
             case 10: 
-             return "Ground start";
+             return F("Ground start");
            break;
 
             case 11: 
-            return "Disarm partition";
+            return F("Disarm partition");
             break;
 
             case 12: 
-            return "Arm partition";
+            return F("Arm partition");
             break;
 
             case 13:
-             return "Entry delay started";
+             return F("Entry delay started");
             break;
 
             case 14:
-              return "Exit delay started";
+              return F("Exit delay started");
             break;
 
             case 15:
-              return "Pre-alarm delay";
+              return F("Pre-alarm delay");
              break;
 
             case 16: 
-              return "Report confirmation";
+              return F("Report confirmation");
             break;
 
             case 99: 
-              return "Any partition status event";
+              return F("Any partition status event");
              break;
 
              default: 
@@ -89,19 +89,19 @@ char* getSubEvent(byte event, byte sub_event)
         switch (sub_event)
         {
           case 0: 
-           return "Bell OFF";
+           return F("Bell OFF");
           break;
 
           case 1: 
-           return "Bell ON";
+           return F("Bell ON");
           break;
           
           case 2: 
-           return "Bell squawk arm";
+           return F("Bell squawk arm");
           break;
 
           case 3: 
-           return "Bell squawk disarm";
+           return F("Bell squawk disarm");
           break;
 
           default: 
@@ -114,99 +114,99 @@ char* getSubEvent(byte event, byte sub_event)
          switch (sub_event)
         {
           case 0: 
-           return "Telephone line trouble";
+           return F("Telephone line trouble");
           break;
 
           case 1: 
-           return "CLEAR + ENTER";
+           return F("CLEAR + ENTER");
           break;
 
           case 3: 
-           return "Arm in Stay mode";
+           return F("Arm in Stay mode");
           break;
 
           case 4: 
-           return "Arm in Sleep mode";
+           return F("Arm in Sleep mode");
           break;
 
           case 5: 
-           return "Arm in Force mode";
+           return F("Arm in Force mode");
           break;
 
           case 6: 
-           return "Full arm when armed in Stay mode";
+           return F("Full arm when armed in Stay mode");
           break;
 
           case 7: 
-           return "PC fail to communicate";
+           return F("PC fail to communicate");
           break;
 
           case 8: 
-           return "Utility key 1-2 pressed";
+           return F("Utility key 1-2 pressed");
           break;
 
           case 9: 
-           return "Utility key 4-5 pressed";
+           return F("Utility key 4-5 pressed");
           break;
 
           case 10: 
-           return "Utility key 7-8 pressed";
+           return F("Utility key 7-8 pressed");
           break;
 
           case 11: 
-           return "Utility key 2-3 pressed";
+           return F("Utility key 2-3 pressed");
           break;
 
           case 12: 
-           return "Utility key 5-6 pressed";
+           return F("Utility key 5-6 pressed");
           break;
 
           case 13: 
-           return "Utility key 8-9 pressed";
+           return F("Utility key 8-9 pressed");
           break;
 
           case 14: 
-           return "Tamper generated alarm";
+           return F("Tamper generated alarm");
           break;
 
           case 15: 
-           return "Supervision loss generated alarm";
+           return F("Supervision loss generated alarm");
           break;
 
           case 20: 
-           return "Full arm when armed in Sleep mode";
+           return F("Full arm when armed in Sleep mode");
           break;
 
           case 23: 
-           return "StayD mode activated";
+           return F("StayD mode activated");
           break;
 
           case 24: 
-           return "StayD mode deactivated";
+           return F("StayD mode deactivated");
           break;
 
           case 25: 
-           return "IP registration status change";
+           return F("IP registration status change");
           break;
 
           case 26: 
-           return "GPRS registration status change";
+           return F("GPRS registration status change");
           break;
 
           case 27: 
-           return "Armed with trouble(s)";
+           return F("Armed with trouble(s)");
           break;
 
           case 28: 
-           return "Supervision alert";
+           return F("Supervision alert");
           break;
 
           case 29: 
-           return "Supervision alert restore";
+           return F("Supervision alert restore");
           break;
 
           case 30: 
-           return "Armed with remote with low battery";
+           return F("Armed with remote with low battery");
           break;
 
          
@@ -280,32 +280,32 @@ char* getSubEvent(byte event, byte sub_event)
         switch (sub_event)
         {
           case 0: 
-           return "Auto-arming";
+           return F("Auto-arming");
           break;
 
           case 1: 
-           return "Late to close";
+           return F("Late to close");
           break;
 
           case 2: 
-           return "No movement arming";
+           return F("No movement arming");
           break;
 
 
           case 3: 
-           return "Partial arming";
+           return F("Partial arming");
           break;
 
           case 4: 
-           return "Quick arming";
+           return F("Quick arming");
           break;
 
           case 5: 
-           return "Arming through WinLoad/BabyWare";
+           return F("Arming through WinLoad/BabyWare");
           break;
 
             case 6: 
-           return "Arming with keyswitch";
+           return F("Arming with keyswitch");
           break;
 
           default:
@@ -330,35 +330,35 @@ char* getSubEvent(byte event, byte sub_event)
          switch (sub_event)
         {
           case 0: 
-           return "Auto-arm cancelled";
+           return F("Auto-arm cancelled");
           break;
 
           case 1: 
-           return "Disarming through WinLoad/BabyWare";
+           return F("Disarming through WinLoad/BabyWare");
           break;
 
           case 2: 
-           return "Disarming through WinLoad/BabyWare after alarm";
+           return F("Disarming through WinLoad/BabyWare after alarm");
           break;
 
           case 3: 
-           return "Alarm cancelled through WinLoad/BabyWare";
+           return F("Alarm cancelled through WinLoad/BabyWare");
           break;
 
           case 4: 
-           return "Paramedical alarm cancelled";
+           return F("Paramedical alarm cancelled");
           break;
 
           case 5: 
-           return "Disarm with keyswitch";
+           return F("Disarm with keyswitch");
           break;
 
           case 6: 
-           return "Disarm with keyswitch after an alarm";
+           return F("Disarm with keyswitch after an alarm");
           break;
 
           case 7: 
-           return "larm cancelled with keyswitch";
+           return F("larm cancelled with keyswitch");
           break;
 
           default:
@@ -391,31 +391,31 @@ char* getSubEvent(byte event, byte sub_event)
          switch (sub_event)
         {
           case 0: 
-           return "Panic non-medical emergency";
+           return F("Panic non-medical emergency");
           break;
 
           case 1: 
-           return "Panic medical";
+           return F("Panic medical");
           break;
 
           case 2: 
-           return "Panic fire";
+           return F("Panic fire");
           break;
 
           case 3: 
-           return "Recent closing";
+           return F("Recent closing");
           break;
 
           case 4: 
-           return "Global shutdown";
+           return F("Global shutdown");
           break;
 
           case 5: 
-           return "Duress alarm";
+           return F("Duress alarm");
           break;
 
           case 6: 
-           return "Keypad lockout";
+           return F("Keypad lockout");
           break;
 
            default:
@@ -442,87 +442,87 @@ char* getSubEvent(byte event, byte sub_event)
          switch (sub_event)
         {
           case 1: 
-           return "AC failure";
+           return F("AC failure");
           break;
 
           case 2: 
-           return "Battery failure";
+           return F("Battery failure");
           break;
 
           case 3: 
-           return "Auxiliary current overload";
+           return F("Auxiliary current overload");
           break;
 
           case 4: 
-           return "Bell current overload";
+           return F("Bell current overload");
           break;
 
           case 5: 
-           return "Bell disconnected";
+           return F("Bell disconnected");
           break;
 
           case 6: 
-           return "Clock loss";
+           return F("Clock loss");
           break;
 
           case 7: 
-           return "Fire loop trouble";
+           return F("Fire loop trouble");
           break;
 
           case 8: 
-           return "Fail call station telephone # 1";
+           return F("Fail call station telephone # 1");
           break;
 
           case 9: 
-           return "Fail call station telephone # 2";
+           return F("Fail call station telephone # 2");
           break;
 
           case 11: 
-           return "Fail to communicate with voice report";
+           return F("Fail to communicate with voice report");
           break;
 
           case 12: 
-           return "RF jamming";
+           return F("RF jamming");
           break;
 
           case 13: 
-           return "GSM RF jamming";
+           return F("GSM RF jamming");
           break;
 
           case 14: 
-           return "GSM no service";
+           return F("GSM no service");
           break;
 
           case 15: 
-           return "GSM supervision lost";
+           return F("GSM supervision lost");
           break;
 
           case 16: 
-           return "Fail to communicate IP receiver 1";
+           return F("Fail to communicate IP receiver 1");
           break;
 
           case 17: 
-           return "Fail to communicate IP receiver 2";
+           return F("Fail to communicate IP receiver 2");
           break;
 
           case 18: 
-           return "IP module no service";
+           return F("IP module no service");
           break;
 
           case 19: 
-           return "IP module supervision loss";
+           return F("IP module supervision loss");
           break;
 
           case 20: 
-           return "Fail to communicate IP receiver 1";
+           return F("Fail to communicate IP receiver 1");
           break;
 
           case 21: 
-           return "Fail to communicate IP receiver 2";
+           return F("Fail to communicate IP receiver 2");
           break;
 
           case 22: 
-           return "GSM/GPRS module tamper trouble";
+           return F("GSM/GPRS module tamper trouble");
           break;
 
            default:
@@ -536,87 +536,87 @@ char* getSubEvent(byte event, byte sub_event)
          switch (sub_event)
         {
           case 1: 
-           return "AC failure";
+           return F("AC failure");
           break;
 
           case 2: 
-           return "Battery failure";
+           return F("Battery failure");
           break;
 
           case 3: 
-           return "Auxiliary current overload";
+           return F("Auxiliary current overload");
           break;
 
           case 4: 
-           return "Bell current overload";
+           return F("Bell current overload");
           break;
 
           case 5: 
-           return "Bell disconnected";
+           return F("Bell disconnected");
           break;
 
           case 6: 
-           return "Clock loss";
+           return F("Clock loss");
           break;
 
           case 7: 
-           return "Fire loop trouble";
+           return F("Fire loop trouble");
           break;
 
           case 8: 
-           return "Fail call station telephone # 1";
+           return F("Fail call station telephone # 1");
           break;
 
           case 9: 
-           return "Fail call station telephone # 2";
+           return F("Fail call station telephone # 2");
           break;
 
           case 11: 
-           return "Fail to communicate with voice report";
+           return F("Fail to communicate with voice report");
           break;
 
           case 12: 
-           return "RF jamming";
+           return F("RF jamming");
           break;
 
           case 13: 
-           return "GSM RF jamming";
+           return F("GSM RF jamming");
           break;
 
           case 14: 
-           return "GSM no service";
+           return F("GSM no service");
           break;
 
           case 15: 
-           return "GSM supervision lost";
+           return F("GSM supervision lost");
           break;
 
           case 16: 
-           return "Fail to communicate IP receiver 1";
+           return F("Fail to communicate IP receiver 1");
           break;
 
           case 17: 
-           return "Fail to communicate IP receiver 2";
+           return F("Fail to communicate IP receiver 2");
           break;
 
           case 18: 
-           return "IP module no service";
+           return F("IP module no service");
           break;
 
           case 19: 
-           return "IP module supervision loss";
+           return F("IP module supervision loss");
           break;
 
           case 20: 
-           return "Fail to communicate IP receiver 1";
+           return F("Fail to communicate IP receiver 1");
           break;
 
           case 21: 
-           return "Fail to communicate IP receiver 2";
+           return F("Fail to communicate IP receiver 2");
           break;
 
           case 22: 
-           return "GSM/GPRS module tamper trouble";
+           return F("GSM/GPRS module tamper trouble");
           break;
 
            default:
@@ -638,11 +638,11 @@ char* getSubEvent(byte event, byte sub_event)
         switch (sub_event)
         {
           case 2: 
-           return "Software log on";
+           return F("Software log on");
           break;
 
           case 3: 
-           return "Software log off";
+           return F("Software log off");
           break;
 
           
