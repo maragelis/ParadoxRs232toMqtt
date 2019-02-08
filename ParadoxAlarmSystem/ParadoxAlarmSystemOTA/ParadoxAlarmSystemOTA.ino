@@ -34,9 +34,9 @@
 #define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 
 #define Hassio 1  // 1 enables 0 disables HAssio support
-#define HomeKit 0 
-#define SendAllE0events 0 //If you need all events set to 1 else 0 
-#define SendEventDescriptions 0 //If you need all events set to 1 else 0 Can cause slow downs on heavy systems
+#define HomeKit 1 // enables homekit topic
+#define SendAllE0events 1 //If you need all events set to 1 else 0 
+#define SendEventDescriptions 1 //If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems
 
 /*
 HomeKit id 
@@ -56,9 +56,10 @@ strDateTime dateTime;
  char *root_topicOut = "paradoxdCTL/out";
  char *root_topicStatus = "paradoxdCTL/status";
  char *root_topicIn = "paradoxdCTL/in";
- char *root_topicArmStatus = "paradoxdCTL/status/Arm";
+ char *root_topicHassioArm = "paradoxdCTL/hassio/Arm";
+ char *root_topicHassio = "paradoxdCTL/hassio";
  char *root_topicArmHomekit = "paradoxdCTL/HomeKit";
- char *root_topicZoneStatus = "paradoxdCTL/status/Zone";
+ 
 //root_topicArmStatus
 
 WiFiClient espClient;
@@ -288,7 +289,7 @@ void sendArmStatus()
   JsonObject& root = jsonBuffer.createObject();
         if (Hassio)
         {
-          sendMQTT(root_topicArmStatus,hassioStatus.stringArmStatus);  
+          sendMQTT(root_topicHassioArm,hassioStatus.stringArmStatus);  
         }
         if (HomeKit)
         {
@@ -336,11 +337,11 @@ void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
     char ZoneTopic[80];
     char stateTopic[80];
 
-    String zone = String(root_topicOut) + "/zone";
+    String zone = String(root_topicHassio) + "/zone";
     zone.toCharArray(ZoneTopic, 80);
 
-    String state_topic = String(root_topicOut) + "/state";
-    state_topic.toCharArray(stateTopic, 80);
+    //String state_topic = String(root_topicHassio) + "/state";
+    //state_topic.toCharArray(stateTopic, 80);
 
     if (event == 1 || event == 0)
     {
@@ -380,13 +381,13 @@ void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
     StaticJsonBuffer<256> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     root["event"]=event;
+    root["sub_event"]=sub_event;
     if (SendEventDescriptions)
     {
       root["sub_eventD"]=getSubEvent(event,sub_event);
       root["eventD"]=getEvent(event);
     }
-    root["sub_event"]=sub_event;
-    root["sub_eventD"]=getSubEvent(event,sub_event);
+    
     root["data"]=dummy;
     root.printTo(outputMQ);
     
@@ -404,20 +405,27 @@ void sendMQTT(String topicNameSend, String dataStr){
     char dataStrSend[200];
     dataStr.toCharArray(dataStrSend,200);
     boolean pubresult = client.publish(topicStrSend,dataStrSend);
-    trc("sending ");
-    trc(dataStr);
-    trc("to ");
-    trc(topicNameSend);
-
+    if (TRACE)
+     {
+      Serial1.print("Sent:");
+      Serial1.print(dataStr);
+      Serial1.print(" to Topic:");
+      Serial1.println(topicNameSend);
+      Serial1.print("with pubresult :");
+      Serial1.println(pubresult);
+    }
 }
 
 void sendCharMQTT(char* topic, char* data)
 {
   handleMqttKeepAlive();
-  Serial1.print("Sending MQmessage to topic: ");
-  Serial1.println(topic);
-  Serial1.print("With data: ");
-  Serial1.println(data);
+  if (TRACE)
+  {
+    Serial1.print("Sending MQmessage to topic: ");
+    Serial1.println(topic);
+    Serial1.print("With data: ");
+    Serial1.println(data);
+  }
   boolean pubresult = client.publish(topic, data);
   
 }

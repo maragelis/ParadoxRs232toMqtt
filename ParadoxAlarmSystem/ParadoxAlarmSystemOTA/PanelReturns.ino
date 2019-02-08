@@ -79,7 +79,7 @@ void ansPanelStatus0()
         root["BatteryTrouble"]=String(NoLowBatteryTroubleIndicator);
         char output[256];
         root.printTo(output);
-        sendCharMQTT(root_topicStatus,output);  
+        sendCharMQTT(root_topicOut,output);  
     
     String Zonename ="";
     int zcnt = 0;
@@ -100,7 +100,7 @@ void ansPanelStatus0()
        }
        char Zonemq[256];
         zonemq.printTo(Zonemq);
-        sendCharMQTT(root_topicStatus,Zonemq); 
+        sendCharMQTT(root_topicOut,Zonemq); 
     }
     
     
@@ -130,7 +130,7 @@ void ansPanelStatus1()
         panelstatus1["zoneisbypassed"]=bool(bitRead(inData[18],3));
             
         panelstatus1.printTo(panelst);
-        sendCharMQTT(root_topicStatus,panelst);  
+        sendCharMQTT(root_topicOut,panelst);  
 
 
      if (AlarmFlg)
