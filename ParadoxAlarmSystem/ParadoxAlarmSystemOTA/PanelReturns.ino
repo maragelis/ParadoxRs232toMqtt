@@ -11,47 +11,33 @@ void answer_E0()
                 if (inData[7] == 48 && inData[8] == 3)
                 {
                   PanelConnected = false;
-                  trc("Recieved PanelConnected = false");
+                  trc(F("Recieved PanelConnected = false"));
                 }
                 else if (inData[7] == 48 && inData[8] == 2 )
                 {
                   PanelConnected = true;
-                   trc("Recieved PanelConnected = true");
+                   trc(F("Recieved PanelConnected = true"));
                 }
 }
 
 
-void answer_00()
-{
-  trc("Answer 0x00 returned");
-  waitfor010Message=true;
-}
-
-void answer_10()
-{
-  trc("Answer 0x10 returned");
-  trc("Setting PanelConnected = true");
-  PanelConnected = true;
-  waitfor010Message=true;
-}
-
 
 void answer_30()
 {
-  trc("Answer 0x30 returned");
+  trc(F("Answer 0x30 returned"));
 }
 
 
 
 void answer_40()
 {
-  trc("Answer 0x40 returned");
+  trc(F("Answer 0x40 returned"));
 }
 
 
 void answer_70()
 {
-  trc("Answer 0x70 returned");
+  trc(F("Answer 0x70 returned"));
   waitfor010Message=true;
 }
 

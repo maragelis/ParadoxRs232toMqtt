@@ -1,223 +1,223 @@
 
-char* getEvent(byte event)
+String getEvent(byte event)
 {
   switch (event)
     {
       case 00:
-        return "Zone OK";
+        return F("Zone OK");
       break;
       
       case 01:
-        return "Zone open ";
+        return F("Zone open ");
       break;
   
       case 02:
-        return "Partition status";
+        return F("Partition status");
       break;
 
     case 03:
-        return "Bell status";
+        return F("Bell status");
       break;
       
     case 06:
-        return "Non-reportable event";
+        return F("Non-reportable event");
       break;
 
     case 12:
-        return "Cold start wireless zone";
+        return F("Cold start wireless zone");
       break;
 
     case 13:
-        return "Cold start wireless module";
+        return F("Cold start wireless module");
       break;
 
     case 14:
-        return "Bypass programming";
+        return F("Bypass programming");
       break;
 
     case 15:
-        return "User code activated output";
+        return F("User code activated output");
       break;
 
     case 16:
-        return "Wireless smoke maintenance signal";
+        return F("Wireless smoke maintenance signal");
       break;
 
     case 17:
-        return "Delay zone alarm transmission";
+        return F("Delay zone alarm transmission");
       break;
 
     case 18:
-        return "Zone signal strength weak 1";
+        return F("Zone signal strength weak 1");
       break;
 
     case 19:
-        return "Zone signal strength weak 2";
+        return F("Zone signal strength weak 2");
       break;
 
     case 20:
-        return "Zone signal strength weak 3";
+        return F("Zone signal strength weak 3");
       break;
 
     case 21:
-        return "Zone signal strength weak 4";
+        return F("Zone signal strength weak 4");
        break;
     
     case 24:
-            return "Fire delay started";
+            return F("Fire delay started");
           break;
 
     case 26:
-        return "Software access";
+        return F("Software access");
       break;
 
     case 27:
-        return "Bus module event";
+        return F("Bus module event");
       break;
 
     case 28:
-        return "StayD pass acknowledged";
+        return F("StayD pass acknowledged");
       break;
 
     case 29:
-        return "Arming with user";
+        return F("Arming with user");
       break;
 
     case 30:
-        return "Special arming";
+        return F("Special arming");
       break;
 
     case 31:
-        return "Disarming with user";
+        return F("Disarming with user");
       break;
 
     case 32:
-        return "Disarming after an alarm with user";
+        return F("Disarming after an alarm with user");
       break;
 
     case 33:
-        return "Alarm cancelled with user";
+        return F("Alarm cancelled with user");
       break;
 
     case 34:
-        return "Special disarming";
+        return F("Special disarming");
       break;
 
     case 35:
-        return "Zone bypassed";
+        return F("Zone bypassed");
       break;
 
     case 36:
-        return "Zone in alarm";
+        return F("Zone in alarm");
       break;
 
     case 37:
-        return "Fire alarm";
+        return F("Fire alarm");
       break;
 
     case 38:
-        return "Zone alarm restore";
+        return F("Zone alarm restore");
       break;
 
     case 39:
-        return "Fire alarm restore";
+        return F("Fire alarm restore");
       break;
 
     case 40:
-        return "Special alarm";
+        return F("Special alarm");
       break;
 
     case 41:
-        return "Zone shutdown";
+        return F("Zone shutdown");
       break;
 
     case 42:
-        return "Zone tampered";
+        return F("Zone tampered");
       break;
 
     case 43:
-        return "Zone tamper restore";
+        return F("Zone tamper restore");
       break;
 
     case 44:
-        return "New trouble";
+        return F("New trouble");
       break;
 
     case 45:
-        return "Trouble restored";
+        return F("Trouble restored");
       break;
 
     case 46:
-        return "Bus/EBus/wireless module new trouble";
+        return F("Bus/EBus/wireless module new trouble");
       break;
 
     case 47:
-        return "Bus/EBus/wireless module trouble restored";
+        return F("Bus/EBus/wireless module trouble restored");
       break;
 
     case 48:
-        return "Special";
+        return F("Special");
       break;
 
     case 49:
-        return "Low battery on zone";
+        return F("Low battery on zone");
       break;
 
     case 50:
-        return "Low battery on zone restore";
+        return F("Low battery on zone restore");
       break;
 
     case 51:
-        return "Zone supervision trouble";
+        return F("Zone supervision trouble");
       break;
 
     case 52:
-        return "Zone supervision restore";
+        return F("Zone supervision restore");
       break;
 
     case 53:
-        return "Wireless module supervision trouble";
+        return F("Wireless module supervision trouble");
       break;
 
     case 54:
-        return "Wireless module supervision restore";
+        return F("Wireless module supervision restore");
       break;
 
     case 55:
-        return "Wireless module tamper trouble";
+        return F("Wireless module tamper trouble");
       break;
 
     case 56:
-        return "Wireless module tamper restore";
+        return F("Wireless module tamper restore");
       break;
 
     case 57:
-        return "Non-medical alarm";
+        return F("Non-medical alarm");
       break;
 
     case 58:
-        return "Zone forced";
+        return F("Zone forced");
       break;
 
     case 59:
-        return "Zone included";
+        return F("Zone included");
       break;
 
     case 60:
-        return "Remote low battery";
+        return F("Remote low battery");
       break;
 
     case 61:
-        return "Remote low battery restore";
+        return F("Remote low battery restore");
       break;
 
     case 64:
-        return "System status";
+        return F("System status");
       break;
 
     
     default:
-      return " ";
+      return "";
       break;
 
     }

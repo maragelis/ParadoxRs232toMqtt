@@ -14,7 +14,7 @@
 
 #define firmware "PARADOX_2.2.0"
 
-#define mqtt_server       "192.168.4.225"
+#define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
 
 #define Hostname          "paradoxdCTL" //not more than 15 
@@ -33,10 +33,10 @@
 #define LED LED_BUILTIN
 #define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 
-#define Hassio 1  // 1 enables 0 disables HAssio support
+#define Hassio 1 // 1 enables 0 disables HAssio support
 #define HomeKit 1 // enables homekit topic
 #define SendAllE0events 1 //If you need all events set to 1 else 0 
-#define SendEventDescriptions 1 //If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems
+#define SendEventDescriptions 1//If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems
 
 /*
 HomeKit id 
@@ -132,12 +132,12 @@ void setup() {
   Serial1.begin(115200);
   Serial1.flush();
   Serial1.setDebugOutput(true);
-  trc("serial monitor is up");
+  trc(F("serial monitor is up"));
   serial_flush_buffer();
 
   
 
-  trc("Running MountFs");
+  trc(F("Running MountFs"));
   mountfs();
 
   setup_wifi();
@@ -152,7 +152,7 @@ void setup() {
   dateTime = NTPch.getNTPtime(2.0, 1);
 
   char readymsg[64];
-  sprintf(readymsg, "SYSTEM READY %s ", firmware);
+  sprintf(readymsg, " {\"firmware\":\"SYSTEM %s\"} ", firmware);
   sendCharMQTT(root_topicStatus,readymsg);
   
   
@@ -167,10 +167,9 @@ void loop() {
 
 byte checksumCalculate(byte checksum) 
 {
-  while (checksum > 255) {
-    checksum = checksum - (checksum / 256) * 256;
-  }
-
+    while (checksum > 255) {
+      checksum = checksum - (checksum / 256) * 256;
+    }
   return checksum & 0xFF;
 }
 
@@ -180,7 +179,7 @@ void StartSSDP()
 
     Serial1.printf("Starting HTTP...\n");
     HTTP.on("/index.html", HTTP_GET, []() {
-      HTTP.send(200, "text/plain", Hostname);
+      HTTP.send(200, "text/html", getpage());
     });
     HTTP.on("/", HTTP_GET, []() {
       HTTP.send(200, "text/plain", Hostname);
@@ -192,33 +191,33 @@ void StartSSDP()
     HTTP.begin();
 
     Serial1.printf("Starting SSDP...\n");
-    SSDP.setSchemaURL("description.xml");
-    SSDP.setDeviceType("upnp:rootdevice");
+    SSDP.setSchemaURL(F("description.xml"));
+    SSDP.setDeviceType(F("upnp:rootdevice"));
     SSDP.setHTTPPort(80);
     SSDP.setName(Hostname);
     SSDP.setSerialNumber(WiFi.macAddress());
     SSDP.setURL(String("http://") + WiFi.localIP().toString().c_str() +"/index.html");
-    SSDP.setModelName("ESP8266Wemos");
+    SSDP.setModelName(F("ESP8266Wemos"));
     SSDP.setModelNumber(firmware);
-    SSDP.setModelURL("https://github.com/maragelis/ParadoxRs232toMqtt");
-    SSDP.setManufacturer("PM ELECTRONICS");
-    SSDP.setManufacturerURL("https://github.com/maragelis/");
+    SSDP.setModelURL(F("https://github.com/maragelis/ParadoxRs232toMqtt"));
+    SSDP.setManufacturer(F("PM ELECTRONICS"));
+    SSDP.setManufacturerURL(F("https://github.com/maragelis/"));
     SSDP.begin();
 
     if (!MDNS.begin(Hostname)) {
-    trc("Error setting up MDNS responder!");
+    trc(F("Error setting up MDNS responder!"));
     while (1) {
       delay(1000);
     }
   }
-    trc("mDNS responder started");
+    trc(F("mDNS responder started"));
 
   
 
   // Add service to MDNS-SD
     MDNS.addService("http", "tcp", 80);
 
-    trc("Ready!\n");
+    trc(F("Ready!\n"));
   }
 }
 
@@ -459,47 +458,38 @@ void readSerialData() {
 
   if ((inData[0] & 0xF0) == 0xE0)
   { 
-    trc("start  answer_E0");
+    trc(F("start  answer_E0"));
     answer_E0();  
   }
-  else if ((inData[0] & 0xF0) == 0x00 && inData[4] != 0x00)
-  {
-    trc("start answer_00");
-    answer_00();
-  }
-  else if ((inData[0] & 0xF0) == 0x10)
-  {
-    trc("start answer_10");
-    answer_10();
-  }
+  
   else if ((inData[0] & 0xF0) == 0x30)
   {
-    trc("start answer_30");
+    trc(F("start answer_30"));
     answer_30();
   }
   else if ((inData[0] & 0xF0) == 0x40)
   {
-    trc("start answer_40");
+    trc(F("start answer_40"));
     answer_40();
   }
   else if ((inData[0] & 0xF0) == 0x70)
   {
-    trc("start answer_70");
+    trc(F("start answer_70"));
     answer_70();
   }
   else if (((inData[0] & 0xF0) == 0x50) && (inData[3] == 0x00))
   {
-    trc("start ansPanelStatus0");
+    trc(F("start ansPanelStatus0"));
     ansPanelStatus0();
   }
   else if (((inData[0] & 0xF0) == 0x50) && (inData[3]  == 0x01))
   {
-    trc("start ansPanelStatus1");
+    trc(F("start ansPanelStatus1"));
     ansPanelStatus1();
   }
   else
   {
-    trc("start serial_flush_buffer");
+    trc(F("start serial_flush_buffer"));
     serial_flush_buffer();
     
   }
@@ -517,7 +507,7 @@ void blink(int duration) {
 }
 
 void saveConfigCallback () {
-  trc("Should save config");
+  trc(F("Should save config"));
   shouldSaveConfig = true;
 }
 
@@ -529,7 +519,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
      trc("Command already Running exiting");
       return;
     }
-  trc("Hey I got a callback ");
+  trc(F("Hey I got a callback "));
   // Conversion to a printable string
   payload[length] = '\0';
   inPayload data;
@@ -566,20 +556,20 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
     else
     {
-      trc("parsing Recievied Json Data");
+      trc(F("parsing Recievied Json Data"));
       data = Decodejson((char *)payload);
       if (JsonParseError)
       {
-        trc("Error parsing Json Command") ;
+        trc(F("Error parsing Json Command") );
         JsonParseError=false;
         return;
       }
-      trc("Json Data is ok ");
+      trc(F("Json Data is ok "));
       PanelError = false;
       
       if (!PanelConnected)
       {
-        trc("Panel not logged in");
+        trc(F("Panel not logged in"));
         doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
         trc(PanelConnected?"Panel logged in":"Panel log on failed");
       }
@@ -589,11 +579,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
   RunningCommand=true;
   if (!PanelConnected)
   {
-    trc("Problem connecting to panel");
+    trc(F("Problem connecting to panel"));
     sendMQTT(root_topicStatus, "{\"status\":\"Problem connecting to panel\"}");
   }else if (data.Command == 0x50  ) 
   {
-    trc("Running panel status command");
+    trc(F("Running panel status command"));
     if (data.Subcommand==0)
     {
      PanelStatus0();
@@ -604,21 +594,21 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   }
   else if (data.Command == 0x91  )  {
-    trc("Running ArmState");
+    trc(F("Running ArmState"));
     ArmState();
   }
   else if (data.Command == 0x30)
   {
-    trc("Running Setdate");
+    trc(F("Running Setdate"));
     panelSetDate();
   }
   
   else if (data.Command != 0x00  )  {
-    trc("Running Command");
+    trc(F("Running Command"));
     ControlPanel(data);
   } 
   else  {
-    trc("Bad Command ");
+    trc(F("Bad Command "));
     sendMQTT(root_topicStatus, "{\"status\":\"Bad Command\" }");
   }
   
@@ -721,7 +711,7 @@ void panelSetDate(){
     
   }else
   {
-    trc("ERROR getting NTP Date ");
+    trc(F("ERROR getting NTP Date "));
     sendMQTT(root_topicStatus,"{\"status\":\"ERROR getting NTP Date  \" }");
   }
 }
@@ -745,7 +735,7 @@ void ControlPanel(inPayload data){
   }
   armdata[36] = checksumCalculate(checksum);
   
-  trc("sending Arm command to panel");
+  trc(F("sending Arm command to panel"));
   Serial.write(armdata, MessageLength);
 }
 
@@ -785,7 +775,7 @@ void PanelStatus0()
   }
 
   data[36] = checksumCalculate(checksum);
-  trc("sending Panel Status 0 command to panel");
+  trc(F("sending Panel Status 0 command to panel"));
   Serial.write(data, MessageLength);   
 }
 
@@ -815,7 +805,7 @@ void PanelStatus1()
     checksum += data[x];
   }
   data[36] = checksumCalculate(checksum);
-  trc("sending Panel Status 1 command to panel");
+  trc(F("sending Panel Status 1 command to panel"));
   Serial.write(data, MessageLength);
 
 }
@@ -825,7 +815,7 @@ void doLogin(byte pass1, byte pass2){
   byte data1[MessageLength] = {};
   byte checksum;
 
-  trc("Running doLogin Function");
+  trc(F("Running doLogin Function"));
 
   memset(data, 0, sizeof(data));
   memset(data1, 0, sizeof(data1));
@@ -843,17 +833,25 @@ void doLogin(byte pass1, byte pass2){
     checksum += data[x];
   }
   data[36] = checksumCalculate(checksum);
-   trc("sending command 0x5f to panel");
+   trc(F("sending command 0x5f to panel"));
     waitfor010Message=false;
     Serial.write(data, MessageLength);
-    while(!waitfor010Message)
-    {
-      readSerial();
-      trc("waiting 0x00 from panel");
+   while (Serial.available()<37  )  
+  { 
+     
+  }                            
+  {
+      pindex=0;
+  
+      while(pindex < 37) // Paradox packet is 37 bytes 
+      {
+          inData[pindex++]=Serial.read();  
+      } 
+      inData[++pindex]=0x00; // Make it print-friendly
+  }
 
-    }
     
-    trc("got callback from 0x5f command");
+    trc(F("got callback from 0x5f command"));
       data1[0] = 0x00;
       data1[4] = inData[4];
       data1[5] = inData[5];
@@ -881,12 +879,26 @@ void doLogin(byte pass1, byte pass2){
       trc("sending command 0x00 to panel");
 
       Serial.write(data1, MessageLength);         
-      while(!waitfor010Message)
+      while (Serial.available()<37  )  
+      { 
+         
+      }                            
       {
-        trc("waiting 0x10 from panel");
-        readSerial();        
+      pindex=0;
+  
+      while(pindex < 37) // Paradox packet is 37 bytes 
+      {
+          inData[pindex++]=Serial.read();  
+      } 
+      inData[++pindex]=0x00; // Make it print-friendly
+          if ((inData[0] & 0xF0) == 0x10)
+          {
+            PanelConnected = true;
+          }
+      
       }
-      trc("Panel login complete");
+
+      trc(F("Panel login complete"));
 }
 
 struct inPayload Decodejson(char *Payload){
@@ -956,14 +968,14 @@ void setup_wifi(){
     WiFiManager wifiManager;
     if (ResetConfig)
     {
-      trc("Resetting wifiManager");
+      trc(F("Resetting wifiManager"));
       WiFi.disconnect();
       wifiManager.resetSettings();
     }
        
     if (mqtt_server=="" || mqtt_port=="")
     {
-      trc("Resetting wifiManager");
+      trc(F("Resetting wifiManager"));
       WiFi.disconnect();
       wifiManager.resetSettings();
       ESP.reset();
@@ -971,7 +983,7 @@ void setup_wifi(){
     }
     else
     {
-      trc("values ar no null ");
+      trc(F("values ar no null "));
     }
 
 
@@ -982,21 +994,21 @@ void setup_wifi(){
     wifiManager.addParameter(&custom_mqtt_port);
         
     if (!wifiManager.autoConnect(Hostname, "")) {
-      trc("failed to connect and hit timeout");
+      trc(F("failed to connect and hit timeout"));
       delay(3000);
       //reset and try again, or maybe put it to deep sleep
       ESP.reset();
       delay(5000);
     }
     //if you get here you have connected to the WiFi
-    trc("connected...yeey :)");
+    trc(F("connected...yeey :)"));
   
     strcpy(mqtt_server, custom_mqtt_server.getValue());
     strcpy(mqtt_port, custom_mqtt_port.getValue());
     
     //save the custom parameters to FS
     if (shouldSaveConfig) {
-      trc("saving config");
+      trc(F("saving config"));
       DynamicJsonBuffer jsonBuffer;
       JsonObject& json = jsonBuffer.createObject();
       json["mqtt_server"] = mqtt_server;
@@ -1004,7 +1016,7 @@ void setup_wifi(){
       
       File configFile = SPIFFS.open("/config.json", "w");
       if (!configFile) {
-        trc("failed to open config file for writing");
+        trc(F("failed to open config file for writing"));
       }
   
       json.printTo(Serial);
@@ -1013,13 +1025,13 @@ void setup_wifi(){
       //end save
     }
   
-    trc("Setting Mqtt Server values");
-    trc("mqtt_server : ");
+    trc(F("Setting Mqtt Server values"));
+    trc(F("mqtt_server : "));
     trc(mqtt_server);
-    trc("mqtt_server_port : ");
+    trc(F("mqtt_server_port : "));
     trc(mqtt_port);
 
-    trc("Setting Mqtt Server connection");
+    trc(F("Setting Mqtt Server connection"));
     unsigned int mqtt_port_x = atoi (mqtt_port); 
     client.setServer(mqtt_server, mqtt_port_x);
     
@@ -1027,8 +1039,8 @@ void setup_wifi(){
    
     reconnect();
     
-    trc("");
-    trc("WiFi connected");
+    
+    trc(F("WiFi connected"));
     Serial1.print("IP address:");
     Serial1.println(WiFi.localIP());
   
@@ -1084,13 +1096,13 @@ void subscribing(String topicNameRec){ // MQTT subscribing to topic
 
 void mountfs(){
    if (SPIFFS.begin()) {
-    trc("mounted file system");
+    trc(F("mounted file system"));
     if (SPIFFS.exists("/config.json")) {
       //file exists, reading and loading
-      trc("reading config file");
+      trc(F("reading config file"));
       File configFile = SPIFFS.open("/config.json", "r");
       if (configFile) {
-        trc("opened config file");
+        trc(F("opened config file"));
         size_t size = configFile.size();
         // Allocate a buffer to store contents of the file.
         std::unique_ptr<char[]> buf(new char[size]);
@@ -1100,25 +1112,25 @@ void mountfs(){
         JsonObject& json = jsonBuffer.parseObject(buf.get());
         json.printTo(Serial);
         if (json.success()) {
-          trc("\nparsed json");
+          trc(F("\nparsed json"));
 
           strcpy(mqtt_server, json["mqtt_server"]);
           strcpy(mqtt_port, json["mqtt_port"]);
           
         } else {
-          trc("failed to load json config");
+          trc(F("failed to load json config"));
           
         }
       }
     }
     else
     {
-      trc("File /config.json doesnt exist");
+      trc(F("File /config.json doesnt exist"));
       //SPIFFS.format();
-      trc("Formatted Spiffs");    
+      trc(F("Formatted Spiffs"));    
     }
   } else {
-    trc("failed to mount FS");
+    trc(F("failed to mount FS"));
   }
 }
 
