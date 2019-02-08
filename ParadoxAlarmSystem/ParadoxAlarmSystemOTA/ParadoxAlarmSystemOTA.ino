@@ -1000,8 +1000,8 @@ void setup_wifi(){
     
     trc("");
     trc("WiFi connected");
-    trc("IP address: ");
-    trc((String)WiFi.localIP());
+    Serial1.print("IP address:");
+    Serial1.println(WiFi.localIP());
   
 }
 

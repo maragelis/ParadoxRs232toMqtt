@@ -3,6 +3,8 @@
         {
             "name": "Mac",
             "includePath": [
+                "/Users/panagiotis/Library/Arduino15/packages/esp8266/tools/**",
+                "/Users/panagiotis/Library/Arduino15/packages/esp8266/hardware/esp8266/2.4.2/**",
                 "/Users/panagiotismaragelis/Library/Arduino15/packages/esp8266/tools/**",
                 "/Users/panagiotismaragelis/Library/Arduino15/packages/esp8266/hardware/esp8266/2.4.1/**",
                 "/Users/panagiotis/Library/Arduino15/packages/esp8266/hardware/esp8266/2.4.0-rc2/cores/esp8266",
@@ -26,8 +28,8 @@
             ],
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c11",
-            "cppStandard": "c++17"
-
+            "cppStandard": "c++17",
+            "forcedInclude": []
         },
         {
             "name": "Win32",
@@ -36,7 +38,6 @@
                 "C:\\Users\\marag\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.4.2\\**"
             ],
             "forcedInclude": []
-
         }
     ],
     "version": 4
