@@ -66,14 +66,13 @@ PubSubClient client(espClient);
 
 bool shouldSaveConfig = false;
 bool ResetConfig = false;
-bool PannelConnected =false;
+bool PanelConnected =false;
 bool PanelError = false;
 bool RunningCommand=false;
 bool JsonParseError=false;
 bool waitfor010Message=false;
  
 char inData[38]; // Allocate some space for the string
-char acData[38];
 char outData[38];
 byte pindex = 0; // Index into array; where to store the character
 
@@ -427,47 +426,65 @@ void readSerial(){
 
 }
 
-
-
 void readSerialData() {
-         pindex=0;
-        
-        while(pindex < 37) // Paradox packet is 37 bytes 
-        {
-            inData[pindex++]=Serial.read();  
-        }
-       
-            inData[++pindex]=0x00; // Make it print-friendly
-           
-              if ((inData[0] & 0xF0) == 0xE0)
-              { 
-                answer_E0();
-                
-              }else if ((inData[0] & 0xF0) == 0x00)
-              {
-                 answer_00();
-              }
-              else if ((inData[0] & 0xF0) == 0x10)
-              {
-                 answer_10();
-              }
-              else if ((inData[0] & 0xF0) == 0x30)
-              {
-                 answer_30();
-              }
-               else if ((inData[0] & 0xF0) == 0x40)
-              {
-                 answer_40();
-              }
-                else if ((inData[0] & 0xF0) == 0x70)
-              {
-                 answer_70();
-              }
-              else
-              {
-                serial_flush_buffer();
-              }
-               
+  pindex=0;
+  
+  while(pindex < 37) // Paradox packet is 37 bytes 
+  {
+      inData[pindex++]=Serial.read();  
+  } 
+  inData[++pindex]=0x00; // Make it print-friendly
+  
+  traceInData();
+
+  if ((inData[0] & 0xF0) == 0xE0)
+  { 
+    trc("start  answer_E0");
+    answer_E0();
+    
+    
+  }else if ((inData[0] & 0xF0) == 0x00)
+  {
+    trc("start answer_00");
+      answer_00();
+  }
+  else if ((inData[0] & 0xF0) == 0x10)
+  {
+    trc("start answer_10");
+      answer_10();
+  }
+  else if ((inData[0] & 0xF0) == 0x30)
+  {
+    trc("start answer_30");
+      answer_30();
+  }
+    else if ((inData[0] & 0xF0) == 0x40)
+  {
+    trc("start answer_40");
+      answer_40();
+  }
+    else if ((inData[0] & 0xF0) == 0x70)
+  {
+    trc("start answer_70");
+      answer_70();
+  }
+    else if (((inData[0] & 0xF0) == 0x50) && (inData[3] == 0x00))
+  {
+    trc("start ansPanelStatus0");
+      ansPanelStatus0();
+  }
+  else if (((inData[0] & 0xF0) == 0x50) && (inData[3]  == 0x01))
+  {
+    trc("start ansPanelStatus1");
+      ansPanelStatus1();
+  }
+  else
+  {
+    trc("start serial_flush_buffer");
+    serial_flush_buffer();
+    blink(100);
+  }
+    
 }
 
 void blink(int duration) {
@@ -511,13 +528,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   else if (callbackstring == "OTA=0")
   {
-      OTAUpdate=0;
-      Serial1.println("OTA update is OFF");
+    OTAUpdate=0;
+    Serial1.println("OTA update is OFF");
   }
   else if (callbackstring == "OTA=1")
   {
     OTAUpdate=1;
-      Serial1.println("OTA update is ON");
+    Serial1.println("OTA update is ON");
   }
   else if (callbackstring=="")
   {
@@ -537,24 +554,23 @@ void callback(char* topic, byte* payload, unsigned int length) {
       trc("Json Data is ok ");
       PanelError = false;
       trc("Start login");
-      if (!PannelConnected)
+      if (!PanelConnected)
         doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
       trc("end login");
       
     }
 
   RunningCommand=true;
-  if (!PannelConnected)
+  if (!PanelConnected)
   {
     trc("Problem connecting to panel");
     sendMQTT(root_topicStatus, "{\"status\":\"Problem connecting to panel\"}");
-  }else if (data.Command == 0x90  ) 
+  }else if (data.Command == 0x50  ) 
   {
-    
     trc("Running panel status command");
     if (data.Subcommand==0)
     {
-     PanelStatus0(false,0);
+     PanelStatus0();
     }
     if (data.Subcommand==1)
     {
@@ -570,14 +586,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
     trc("Running Setdate");
     panelSetDate();
   }
-  else if (data.Command == 0x92)
-  {
-    trc("Running ZoneState");
-      ZoneState(data.Subcommand);
-  } 
-   else if (data.Command != 0x00  )  {
-     trc("Running Command");
-      ControlPanel(data);
+  
+  else if (data.Command != 0x00  )  {
+    trc("Running Command");
+    ControlPanel(data);
   } 
   else  {
     trc("Bad Command ");
@@ -595,78 +607,45 @@ byte getPanelCommand(String data){
   data.toLowerCase();
   if (data == "stay" || data=="0")
   {
-    
-    retval = Stay_Arm;
-    
+    retval = Stay_Arm; 
   }
-
   else if (data == "arm" || data=="1")
   {    
     retval= Full_Arm;
   }
   else if (data == "sleep" || data=="2")
-
   {
-    
-    retval= Sleep_Arm;
-    
+    retval= Sleep_Arm; 
   }
-
   else if (data == "disarm" || data == "3")
-
   {
-    
-    retval=Disarm;
-    
+   retval=Disarm;  
   }
-
-
   else if (data == "bypass" || data == "10")
-
   {
-    
-    retval=Bypass;
-    
+    retval=Bypass; 
   }
-
   else if (data == "pgm_on" || data == "pgmon")
   {
     retval = PGMon;
   }
-
   else if (data == "pgm_off" || data == "pgmoff")
   {
     retval = PGMoff;
   }
-
   else if (data == "panelstatus" )
   {
-    retval=0x90;
-    trc("PAnelStatus command ");
-    
+    retval=0x50;
   }
-
   else if (data == "setdate")
   {
-    retval=0x30;
-    
+    retval=0x30; 
   }
   else if (data == "armstate")
   {
     retval=0x91;
-    
   }
-   else if (data == "zonestate")
-  {
-    retval=0x92;
-    
-  }
-
-  else if (data == "disconnect" || data == "99")
-  {
-    retval=0x00;
-    //PanelDisconnect();
-  }
+  
     if(TRACE)
     {
       Serial1.print("returned command = ");
@@ -711,12 +690,7 @@ void panelSetDate(){
     }
 
     data[36] = checksumCalculate(checksum);
-    serialCleanup();
     Serial.write(data, MessageLength);
-     
-   
-
-    
     
   }else
   {
@@ -724,14 +698,6 @@ void panelSetDate(){
   }
 }
 
-void serialCleanup()
-{
-   while (Serial.available()>37)
-  {
-    trc("serial cleanup");
-    readSerial();
-  }
-}
 
 void ControlPanel(inPayload data){
   byte armdata[MessageLength] = {};
@@ -751,9 +717,7 @@ void ControlPanel(inPayload data){
   }
   armdata[36] = checksumCalculate(checksum);
   
-
-  trc("sending Data");
-  
+  trc("sending Arm command to panel");
   Serial.write(armdata, MessageLength);
 }
 
@@ -771,18 +735,12 @@ void PanelDisconnect(){
   {
     checksum += data[x];
   }
-
-  
-
-  data[36] = checksumCalculate(checksum);
-  serialCleanup();
+  data[36] = checksumCalculate(checksum);  
   Serial.write(data, MessageLength);
-  
 
-  
 }
 
-void PanelStatus0(bool showonlyZone ,int zone)
+void PanelStatus0()
 {
   byte data[MessageLength] = {};
   byte checksum;
@@ -800,74 +758,16 @@ void PanelStatus0(bool showonlyZone ,int zone)
     checksum += data[x];
   }
 
-  
-
   data[36] = checksumCalculate(checksum);
-  serialCleanup();
-  Serial.write(data, MessageLength);
-    
-  readSerial();
-
-    bool Timer_Loss = bitRead(acData[4],7);
-    bool PowerTrouble  = bitRead(acData[4],1);
-    bool ACFailureTroubleIndicator = bitRead(acData[6],1);
-    bool NoLowBatteryTroubleIndicator = bitRead(acData[6],0);
-    bool TelephoneLineTroubleIndicator = bitRead(acData[8],0);
-    int ACInputDCVoltageLevel = acData[15];
-    int PowerSupplyDCVoltageLevel =acData[16];
-    int BatteryDCVoltageLevel=acData[17];
-
-    if (!showonlyZone)
-    {
-        StaticJsonBuffer<256> jsonBuffer;
-        JsonObject& root = jsonBuffer.createObject();
-        root["Timer_Loss"]=String(Timer_Loss);
-        root["PowerTrouble"]=String(PowerTrouble);
-        root["ACFailureTrouble"]=String(ACFailureTroubleIndicator);
-        root["TelephoneLineTrouble"]=String(TelephoneLineTroubleIndicator);
-        root["PSUDCVoltage"]=String(PowerSupplyDCVoltageLevel);
-        root["BatteryDCVoltage"]=String(BatteryDCVoltageLevel);
-        root["BatteryTrouble"]=String(NoLowBatteryTroubleIndicator);
-        char output[256];
-        root.printTo(output);
-        sendCharMQTT(root_topicStatus,output);  
-    }
-    String retval = "";
-    String Zonename ="";
-    int zcnt = 0;
-
-    
-        
-    for (int i = 19 ; i <= 22;i++)
-    {
-      StaticJsonBuffer<256> jsonBuffer;
-        JsonObject& zonemq = jsonBuffer.createObject();
-     for (int j = 0 ; j < 8;j++) 
-       {
-         Zonename = "Z" + String(++zcnt);
-
-       
-        zonemq[Zonename] =  bitRead(acData[i],j);
-        
-        //trc (retval);
-       
-       }
-       char Zonemq[256];
-        zonemq.printTo(Zonemq);
-        sendCharMQTT(root_topicStatus,Zonemq); 
-    }
-    
-    
+  trc("sending Panel Status 0 command to panel");
+  Serial.write(data, MessageLength);   
 }
 
-void ZoneState(int zone)
-{
-  PanelStatus0(true,zone);
-}
+
 
 void ArmState()
 {
-  PanelStatus1(true);
+    sendArmStatus();
 }
 
 void PanelStatus1(bool ShowOnlyState)
@@ -888,100 +788,9 @@ void PanelStatus1(bool ShowOnlyState)
   {
     checksum += data[x];
   }
-
-  
-
   data[36] = checksumCalculate(checksum);
-  serialCleanup();
+  trc("sending Panel Status 1 command to panel");
   Serial.write(data, MessageLength);
-  
-    readSerial();
-
-  bool Fire=bitRead(acData[17],7);
-  bool Audible=bitRead(acData[17],6);
-  bool Silent=bitRead(acData[17],5);
-  bool AlarmFlg=bitRead(acData[17],4);
-  bool StayFlg=bitRead(acData[17],2);
-  bool SleepFlg=bitRead(acData[17],1);
-  bool ArmFlg=bitRead(acData[17],0);
-
-
-//sendMQTT(root_topicStatus,"Timer_Loss=" +String(inData[4]) );
-String retval = "{ \"Fire\":\""  + String(Fire) + "\"" +
-                  ",\"Audible\":\""  + String(Audible) + "\"" +
-                  ",\"Silent\":\""  + String(Silent) + "\"" +
-                  ",\"AlarmFlg\":\""  + String(AlarmFlg) + "\"" +
-                  ",\"StayFlg\":\""  + String(StayFlg) + "\"" +
-                  ",\"SleepFlg\":\""  + String(SleepFlg) + "\"" +
-                  ",\"ArmFlg\":\"" + String(ArmFlg) + "\"}";
-
-
-    trc(retval);
-    if (!ShowOnlyState)
-    {
-    sendMQTT(root_topicStatus,retval);
-    }
-
-     if (AlarmFlg)
-    {
-       //retval = "{ \"Armstatus\":4,\"ArmstatusDescr\":\"ALARM_TRIGGERED\"}" ;
-       hassioStatus.stringArmStatus="triggered";
-       homekitStatus.stringArmStatus="ALARM_TRIGGERED";
-       homekitStatus.intArmStatus=4;
-    }
-    else if (StayFlg)
-    {
-       //retval = "{ \"Armstatus\":0,\"ArmstatusDescr\":\"STAY_ARM\"}" ;
-       hassioStatus.stringArmStatus="armed_home";
-       homekitStatus.stringArmStatus="STAY_ARM";
-       homekitStatus.intArmStatus=0;
-    }else if (SleepFlg)
-    {
-       //retval = "{ \"Armstatus\":2,\"ArmstatusDescr\":\"NIGHT_ARM\"}" ;
-        hassioStatus.stringArmStatus="armed_home";
-       homekitStatus.stringArmStatus="NIGHT_ARM";
-       homekitStatus.intArmStatus=2;
-    }
-    else if (ArmFlg)
-    {
-       //retval = "{ \"Armstatus\":1,\"ArmstatusDescr\":\"AWAY_ARM\"}" ;
-        hassioStatus.stringArmStatus = "armed_away";
-         homekitStatus.stringArmStatus = "AWAY_ARM";
-         homekitStatus.intArmStatus = 1;
-    }
-    else if (!SleepFlg && !StayFlg && !ArmFlg)
-    {
-      //retval = "{ \"Armstatus\":3,\"ArmstatusDescr\":\"DISARMED\"}" ;
-        hassioStatus.stringArmStatus = "disarmed";
-        homekitStatus.stringArmStatus = "DISARMED";
-        homekitStatus.intArmStatus = 3;
-    }
-    
-    else
-    {
-       retval = "{ \"Armstatus\":99,\"ArmstatusDescr\":\"unknown\"}" ;
-        hassioStatus.stringArmStatus = "unknown";
-        homekitStatus.stringArmStatus = "unknown";
-        homekitStatus.intArmStatus = 99;
-    }
-    //sendMQTT(root_topicArmStatus,retval);
-    sendArmStatus();
-    
-  bool zoneisbypassed =bitRead(acData[18],3);
-  bool ParamedicAlarm=bitRead(acData[19],7);
- 
-
-
-
- retval = "{ \"zoneisbypassed\":\""  + String(zoneisbypassed) + "\"" +
-                  ",\"ParamedicAlarm\":\"" + String(ParamedicAlarm) + "\"}";
-
-    trc(retval);
-    if (!ShowOnlyState)
-    {
-    sendMQTT(root_topicStatus,retval);
-    }
-  
 
 }
 void doLogin(byte pass1, byte pass2){
@@ -991,7 +800,6 @@ void doLogin(byte pass1, byte pass2){
 if (TRACE)
 {
   trc("Running doLogin Function");
-  
 }
   memset(data, 0, sizeof(data));
   memset(data1, 0, sizeof(data1));
@@ -1008,21 +816,7 @@ if (TRACE)
   {
     checksum += data[x];
   }
-
-  
-
   data[36] = checksumCalculate(checksum);
-
-  if (TRACE)
-  {
-    for (int x = 0; x < MessageLength; x++)
-    {
-      //Serial1.print("Address-");
-      //Serial1.print(x);
-      //Serial1.print("=");
-      //Serial1.println(data[x], HEX);
-    }
-  }
    
     Serial.write(data, MessageLength);
   
@@ -1031,18 +825,7 @@ if (TRACE)
       readSerial();
       yield();
     }
-    if (TRACE)
-    {
-       for (int x = 0; x < MessageLength; x++)
-       {
-         //Serial1.print("replAddress-");
-         //Serial1.print(x);
-         //Serial1.print("=");
-         //Serial1.println(acData[x], HEX);
-         
-       }
-    }
-      
+     
       data1[0] = 0x00;
       data1[4] = inData[4];
       data1[5] = inData[5];
@@ -1064,27 +847,14 @@ if (TRACE)
       {
         checksum += data1[x];
       }
-      
-
       data1[36] = checksumCalculate(checksum);
-
-      if (TRACE)
-      {
-         for (int x = 0; x < MessageLength; x++)
-         {
-          // Serial1.print("SendinGINITAddress-");
-          // Serial1.print(x);
-          // Serial1.print("=");
-          // Serial1.println(data1[x], HEX);
-         }
-      }
+      
       waitfor010Message=false;
-      Serial.write(data1, MessageLength);   
-          
-       while(!waitfor010Message)
-        {
-      readSerial();
-      yield();
+      Serial.write(data1, MessageLength);         
+      while(!waitfor010Message)
+      {
+        readSerial();
+        yield();
       }
 }
 
@@ -1119,44 +889,26 @@ struct inPayload Decodejson(char *Payload){
     pass2.toCharArray(charpass2, 4);
     subcommand.toCharArray(charsubcommand,4);
 
-    
-        
-        // trc(password);
-        // trc(command);
+    unsigned long number1 = strtoul(charpass1, nullptr, 16);
+    unsigned long number2 = strtoul(charpass2, nullptr, 16);
+    unsigned long number3 = strtoul(charsubcommand, nullptr, 16);
 
-        // trc(charpass1);
-        // trc(charpass2);
+    if (number2 < 10)
+      number2 = number2 + 160;
 
-  unsigned long number1 = strtoul(charpass1, nullptr, 16);
-  unsigned long number2 = strtoul(charpass2, nullptr, 16);
-  unsigned long number3 = strtoul(charsubcommand, nullptr, 16);
+    if (number1 < 10)
+      number1 = number1 + 160;
 
-  if (number2 < 10)
-    number2 = number2 + 160;
+    byte PanelPassword1 = number1 & 0xFF; 
+    byte PanelPassword2 = number2 & 0xFF; 
+    byte SubCommand = number3 & 0xFF;
 
-  if (number1 < 10)
-    number1 = number1 + 160;
+    byte CommandB = getPanelCommand(command) ;
+  
+    inPayload data1 = {PanelPassword1, PanelPassword2, CommandB, SubCommand};
 
-  byte PanelPassword1 = number1 & 0xFF; 
-  byte PanelPassword2 = number2 & 0xFF; 
-  byte SubCommand = number3 & 0xFF;
-
-
-
-  byte CommandB = getPanelCommand(command) ;
-
-    // if (TRACE)
-    // {
-    //   Serial1.print("0x");
-    //   Serial1.println(PanelPassword1, HEX);
-    //   Serial1.print("0x");
-    //   Serial1.println(PanelPassword2, HEX);
-    // }
-      inPayload data1 = {PanelPassword1, PanelPassword2, CommandB, SubCommand};
-
-      return data1;
+    return data1;
   }
-
   return indata;
 }
 
@@ -1167,12 +919,9 @@ void serial_flush_buffer(){
 
 void setup_wifi(){
   
-    
-  
     WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
     WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 6);
 
-  
     WiFiManager wifiManager;
     if (ResetConfig)
     {
@@ -1180,8 +929,7 @@ void setup_wifi(){
       WiFi.disconnect();
       wifiManager.resetSettings();
     }
-   
-    
+       
     if (mqtt_server=="" || mqtt_port=="")
     {
       trc("Resetting wifiManager");
@@ -1199,12 +947,9 @@ void setup_wifi(){
     wifiManager.setSaveConfigCallback(saveConfigCallback);
     wifiManager.setConfigPortalTimeout(180);
     
-    
     wifiManager.addParameter(&custom_mqtt_server);
     wifiManager.addParameter(&custom_mqtt_port);
-    
-
-    
+        
     if (!wifiManager.autoConnect(Hostname, "")) {
       trc("failed to connect and hit timeout");
       delay(3000);
@@ -1212,16 +957,9 @@ void setup_wifi(){
       ESP.reset();
       delay(5000);
     }
-  
-  
-  
-    
-  
-  
     //if you get here you have connected to the WiFi
     trc("connected...yeey :)");
   
-    //read updated parameters
     strcpy(mqtt_server, custom_mqtt_server.getValue());
     strcpy(mqtt_port, custom_mqtt_port.getValue());
     
@@ -1244,10 +982,6 @@ void setup_wifi(){
       //end save
     }
   
-    //trc("local ip : ");
-    //Serial1.println(WiFi.localIP());
-  
-    
     trc("Setting Mqtt Server values");
     trc("mqtt_server : ");
     trc(mqtt_server);
@@ -1260,14 +994,12 @@ void setup_wifi(){
     
     client.setCallback(callback);
    
-     reconnect();
-    
+    reconnect();
     
     trc("");
     trc("WiFi connected");
     trc("IP address: ");
-    
-   trc((String)WiFi.localIP());
+    trc((String)WiFi.localIP());
   
 }
 
@@ -1353,8 +1085,6 @@ void mountfs(){
       trc("File /config.json doesnt exist");
       //SPIFFS.format();
       trc("Formatted Spiffs");    
-     
-
     }
   } else {
     trc("failed to mount FS");
@@ -1362,12 +1092,24 @@ void mountfs(){
 }
 
 
-
-
 void trc(String msg){
   if (TRACE) {
   Serial1.println(msg);
  // sendMQTT(root_topicStatus,msg);
+  }
+}
+
+void traceInData()
+{
+  if (TRACE && (inData[0] & 0xF0) != 0xE0)
+  {
+    for (int x = 0; x < MessageLength; x++)
+    {
+      Serial1.print("Address-");
+      Serial1.print(x);
+      Serial1.print("=");
+      Serial1.println(inData[x], HEX);
+    }
   }
 }
 
