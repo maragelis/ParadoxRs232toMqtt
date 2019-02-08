@@ -35,16 +35,17 @@
 
 #define Hassio 1  // 1 enables 0 disables HAssio support
 #define HomeKit 0 
+#define SendAllE0events 1 //If you need all events set to 1 else 0 
+#define SendEventDescriptions 1 //If you need all events set to 1 else 0 Can cause slow downs on heavy systems
 
 /*
+HomeKit id 
 Characteristic.SecuritySystemCurrentState.STAY_ARM = 0;
 Characteristic.SecuritySystemCurrentState.AWAY_ARM = 1;
 Characteristic.SecuritySystemCurrentState.NIGHT_ARM = 2;
 Characteristic.SecuritySystemCurrentState.DISARMED = 3;
 Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED = 4;
 */
-
-
 
 bool TRACE = 0;
 bool OTAUpdate = 0;
@@ -141,12 +142,10 @@ void setup() {
   setup_wifi();
   StartSSDP();
   
-
   ArduinoOTA.setHostname(Hostname);
   ArduinoOTA.begin();
   trc("Finnished wifi setup");
   delay(1500);
-  
   
   NTPch.setRecvTimeout(5);
   dateTime = NTPch.getNTPtime(2.0, 1);
@@ -155,15 +154,11 @@ void setup() {
   sprintf(readymsg, "SYSTEM READY %s ", firmware);
   sendCharMQTT(root_topicStatus,readymsg);
   ArmState();
-  
-  
+
 }
 
 void loop() {
-   
-   readSerial();        
-
-
+   readSerial();    
 }
 
 
@@ -363,23 +358,24 @@ void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
     sendCharMQTT(root_topicArmHomekit,output); 
   }
 
-      char outputMQ[256];
-     StaticJsonBuffer<256> jsonBuffer;
+  if (SendAllE0events)
+  {
+    char outputMQ[256];
+    StaticJsonBuffer<256> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
-    //root["armstatus"]=homekitStatus.intArmStatus;
-    //root["armstatusD"]=homekitStatus.stringArmStatus;
     root["event"]=event;
-    root["eventD"]=getEvent(event);
-    
+    if (SendEventDescriptions)
+    {
+      root["sub_eventD"]=getSubEvent(event,sub_event);
+      root["eventD"]=getEvent(event);
+    }
     root["sub_event"]=sub_event;
     root["sub_eventD"]=getSubEvent(event,sub_event);
     root["data"]=dummy;
-    
     root.printTo(outputMQ);
     sendCharMQTT(root_topicOut,outputMQ); 
+  }
     
-     //String retval = "{ \"armstatus\":" + String(homekitStatus.intArmStatus) + ", \"event\":" + String(event) + ", \"sub_event\":" + String(sub_event) + ", \"dummy\":\"" + String(dummy) + "\"}";
-    //sendMQTT(root_topicOut,retval);   
 }
 
 
@@ -410,7 +406,6 @@ void sendCharMQTT(char* topic, char* data)
 void readSerial(){
   while (Serial.available()<37  )  
   { 
-      
       if (OTAUpdate)
       {
         ArduinoOTA.handle();
@@ -418,7 +413,6 @@ void readSerial(){
       handleMqttKeepAlive();
       HTTP.handleClient();
       yield();
-
   }                            
   {
        readSerialData();       
@@ -440,43 +434,42 @@ void readSerialData() {
   if ((inData[0] & 0xF0) == 0xE0)
   { 
     trc("start  answer_E0");
-    answer_E0();
-    
-    
-  }else if ((inData[0] & 0xF0) == 0x00)
+    answer_E0();  
+  }
+  else if ((inData[0] & 0xF0) == 0x00)
   {
     trc("start answer_00");
-      answer_00();
+    answer_00();
   }
   else if ((inData[0] & 0xF0) == 0x10)
   {
     trc("start answer_10");
-      answer_10();
+    answer_10();
   }
   else if ((inData[0] & 0xF0) == 0x30)
   {
     trc("start answer_30");
-      answer_30();
+    answer_30();
   }
-    else if ((inData[0] & 0xF0) == 0x40)
+  else if ((inData[0] & 0xF0) == 0x40)
   {
     trc("start answer_40");
-      answer_40();
+    answer_40();
   }
-    else if ((inData[0] & 0xF0) == 0x70)
+  else if ((inData[0] & 0xF0) == 0x70)
   {
     trc("start answer_70");
-      answer_70();
+    answer_70();
   }
-    else if (((inData[0] & 0xF0) == 0x50) && (inData[3] == 0x00))
+  else if (((inData[0] & 0xF0) == 0x50) && (inData[3] == 0x00))
   {
     trc("start ansPanelStatus0");
-      ansPanelStatus0();
+    ansPanelStatus0();
   }
   else if (((inData[0] & 0xF0) == 0x50) && (inData[3]  == 0x01))
   {
     trc("start ansPanelStatus1");
-      ansPanelStatus1();
+    ansPanelStatus1();
   }
   else
   {
@@ -494,6 +487,7 @@ void blink(int duration) {
   digitalWrite(LED_BUILTIN,HIGH);
  
 }
+
 void saveConfigCallback () {
   trc("Should save config");
   shouldSaveConfig = true;
@@ -514,13 +508,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
   
   trc("JSON Returned! ====");
   String callbackstring = String((char *)payload);
-  if (callbackstring == "Trace=1")
+  
+  if (callbackstring == "Trace=1" || callbackstring == "trace=1" || callbackstring=="TRACE=1")
   {
     TRACE=1;
     Serial1.println("Trace is ON");
     return ;
   }
-  else if (callbackstring == "Trace=0")
+  else if (callbackstring == "Trace=0" || callbackstring == "trace=0" || callbackstring=="TRACE=0")
   {
     TRACE=0;
     Serial1.println("Trace is OFF");
@@ -690,11 +685,13 @@ void panelSetDate(){
     }
 
     data[36] = checksumCalculate(checksum);
+    trc("sending setDate command to panel");
     Serial.write(data, MessageLength);
     
   }else
   {
-   sendMQTT(root_topicStatus,"{\"status\":\"ERROR getting NTP Date  \" }");
+    trc("ERROR getting NTP Date ");
+    sendMQTT(root_topicStatus,"{\"status\":\"ERROR getting NTP Date  \" }");
   }
 }
 
@@ -737,7 +734,6 @@ void PanelDisconnect(){
   }
   data[36] = checksumCalculate(checksum);  
   Serial.write(data, MessageLength);
-
 }
 
 void PanelStatus0()
@@ -793,14 +789,14 @@ void PanelStatus1(bool ShowOnlyState)
   Serial.write(data, MessageLength);
 
 }
+
 void doLogin(byte pass1, byte pass2){
   byte data[MessageLength] = {};
   byte data1[MessageLength] = {};
   byte checksum;
-if (TRACE)
-{
+
   trc("Running doLogin Function");
-}
+
   memset(data, 0, sizeof(data));
   memset(data1, 0, sizeof(data1));
 
@@ -817,15 +813,18 @@ if (TRACE)
     checksum += data[x];
   }
   data[36] = checksumCalculate(checksum);
-   
+   trc("sending command 0x5f to panel");
     Serial.write(data, MessageLength);
   
     while(!waitfor010Message)
     {
       readSerial();
       yield();
+      trc("waiting 0x00 from panel");
+
     }
-     
+    
+    trc("got callback from 0x5f command");
       data1[0] = 0x00;
       data1[4] = inData[4];
       data1[5] = inData[5];
@@ -850,11 +849,14 @@ if (TRACE)
       data1[36] = checksumCalculate(checksum);
       
       waitfor010Message=false;
+      trc("sending command 0x00 to panel");
+
       Serial.write(data1, MessageLength);         
       while(!waitfor010Message)
       {
         readSerial();
         yield();
+        trc("waiting 0x10 from panel");
       }
 }
 
@@ -1014,7 +1016,7 @@ boolean reconnect() {
     if (client.connect(charBuf,root_topicStatus,0,false,"{\"status\":\"Paradox Disconnected\"}")) {
     // Once connected, publish an announcement...
       //client.publish(root_topicOut,"connected");
-      trc("connected");
+      trc("MQTT connected");
       sendMQTT(root_topicStatus, "{\"status\":\"Paradox connected\"}");
       //Topic subscribed so as to get data
       String topicNameRec = root_topicIn;

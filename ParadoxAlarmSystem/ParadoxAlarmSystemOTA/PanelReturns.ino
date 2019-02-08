@@ -21,11 +21,13 @@ void answer_E0()
 
 void answer_00()
 {
+  trc("Answer 0x00 returned");
   waitfor010Message=true;
 }
 
 void answer_10()
 {
+  trc("Answer 0x10 returned");
   PanelConnected = true;
   waitfor010Message=true;
 }
@@ -47,6 +49,7 @@ void answer_40()
 void answer_70()
 {
   trc("Answer 0x70 returned");
+  waitfor010Message=true;
 }
 
 
