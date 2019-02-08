@@ -12,6 +12,7 @@
 #include <ArduinoJson.h>
 #include <NTPtimeESP.h>
 
+#define firmware "PARADOX_2.2.0"
 
 #define mqtt_server       "192.168.4.225"
 #define mqtt_port         "1883"
@@ -69,6 +70,7 @@ bool PannelConnected =false;
 bool PanelError = false;
 bool RunningCommand=false;
 bool JsonParseError=false;
+bool waitfor010Message=false;
  
 char inData[38]; // Allocate some space for the string
 char acData[38];
@@ -115,8 +117,7 @@ typedef struct {
 
 void setup() {
   pinMode(LED, OUTPUT);
-  blink(100);
-  delay(1000);
+  
   WiFi.mode(WIFI_STA);
 
   Serial.setRxBufferSize(384);
@@ -146,11 +147,17 @@ void setup() {
   ArduinoOTA.begin();
   trc("Finnished wifi setup");
   delay(1500);
-  digitalWrite(LED, HIGH);
-  ArmState();
+  
   
   NTPch.setRecvTimeout(5);
   dateTime = NTPch.getNTPtime(2.0, 1);
+
+  char readymsg[64];
+  sprintf(readymsg, "SYSTEM READY %s ", firmware);
+  sendCharMQTT(root_topicStatus,readymsg);
+  ArmState();
+  
+  
 }
 
 void loop() {
@@ -195,7 +202,7 @@ void StartSSDP()
     SSDP.setSerialNumber(WiFi.macAddress());
     SSDP.setURL(String("http://") + WiFi.localIP().toString().c_str() +"/index.html");
     SSDP.setModelName("ESP8266Wemos");
-    SSDP.setModelNumber("WEMOSD1");
+    SSDP.setModelNumber(firmware);
     SSDP.setModelURL("https://github.com/maragelis/ParadoxRs232toMqtt");
     SSDP.setManufacturer("PM ELECTRONICS");
     SSDP.setManufacturerURL("https://github.com/maragelis/");
@@ -420,23 +427,6 @@ void readSerial(){
 
 }
 
-void readSerialQ(){
-  while (Serial.available()<37  )  
-     {
-      yield();
-      }                            
-     {
-       pindex=0;
-        
-        while(pindex < 37) // Paradox packet is 37 bytes 
-        {
-            acData[pindex++]=Serial.read();  
-                     
-        }   
-         acData[++pindex]=0x00;  
-     }
-
-}
 
 
 void readSerialData() {
@@ -450,29 +440,34 @@ void readSerialData() {
             inData[++pindex]=0x00; // Make it print-friendly
            
               if ((inData[0] & 0xF0) == 0xE0)
-              { // Does it look like a valid packet?
-                paradox.armstatus = inData[0];
-                paradox.event = inData[7];
-                paradox.sub_event = inData[8];
-                String zlabel = String(inData[15]) + String(inData[16]) + String(inData[17]) + String(inData[18]) + String(inData[19]) + String(inData[20]) + String(inData[21]) + String(inData[22]) + String(inData[23]) + String(inData[24]) + String(inData[25]) + String(inData[26]) + String(inData[27]) + String(inData[28]) + String(inData[29]) + String(inData[30]);
-                if (inData[14]!= 1){
-                paradox.dummy = zlabel;
-                }
-                processMessage(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
-                if (inData[7] == 48 && inData[8] == 3)
-                {
-                  PannelConnected = false;
-                }
-                else if (inData[7] == 48 && inData[8] == 2 )
-                {
-                  PannelConnected = true;
-                }
+              { 
+                answer_E0();
                 
-              }else
+              }else if ((inData[0] & 0xF0) == 0x00)
               {
-                 serial_flush_buffer();
+                 answer_00();
               }
-              
+              else if ((inData[0] & 0xF0) == 0x10)
+              {
+                 answer_10();
+              }
+              else if ((inData[0] & 0xF0) == 0x30)
+              {
+                 answer_30();
+              }
+               else if ((inData[0] & 0xF0) == 0x40)
+              {
+                 answer_40();
+              }
+                else if ((inData[0] & 0xF0) == 0x70)
+              {
+                 answer_70();
+              }
+              else
+              {
+                serial_flush_buffer();
+              }
+               
 }
 
 void blink(int duration) {
@@ -718,9 +713,10 @@ void panelSetDate(){
     data[36] = checksumCalculate(checksum);
     serialCleanup();
     Serial.write(data, MessageLength);
-    readSerialQ();
-    
+     
    
+
+    
     
   }else
   {
@@ -757,17 +753,8 @@ void ControlPanel(inPayload data){
   
 
   trc("sending Data");
-  serialCleanup();
-  Serial.write(armdata, MessageLength);
-  readSerialQ();
-
-  if ( acData[0]  >= 40 && acData[0] <= 45)
-  {
-    sendMQTT(root_topicStatus, "{\"status\":\"Command success\"} ");
-    trc(" Command success ");
-    }
   
-
+  Serial.write(armdata, MessageLength);
 }
 
 void PanelDisconnect(){
@@ -818,7 +805,8 @@ void PanelStatus0(bool showonlyZone ,int zone)
   data[36] = checksumCalculate(checksum);
   serialCleanup();
   Serial.write(data, MessageLength);
-  readSerialQ();
+    
+  readSerial();
 
     bool Timer_Loss = bitRead(acData[4],7);
     bool PowerTrouble  = bitRead(acData[4],1);
@@ -906,7 +894,7 @@ void PanelStatus1(bool ShowOnlyState)
   data[36] = checksumCalculate(checksum);
   serialCleanup();
   Serial.write(data, MessageLength);
-    
+  
     readSerial();
 
   bool Fire=bitRead(acData[17],7);
@@ -1035,10 +1023,14 @@ if (TRACE)
       //Serial1.println(data[x], HEX);
     }
   }
-    serialCleanup();
+   
     Serial.write(data, MessageLength);
-    
-    readSerialQ();
+  
+    while(!waitfor010Message)
+    {
+      readSerial();
+      yield();
+    }
     if (TRACE)
     {
        for (int x = 0; x < MessageLength; x++)
@@ -1052,12 +1044,12 @@ if (TRACE)
     }
       
       data1[0] = 0x00;
-      data1[4] = acData[4];
-      data1[5] = acData[5];
-      data1[6] = acData[6];
-      data1[7] = acData[7];
-      data1[7] = acData[8];
-      data1[9] = acData[9];
+      data1[4] = inData[4];
+      data1[5] = inData[5];
+      data1[6] = inData[6];
+      data1[7] = inData[7];
+      data1[7] = inData[8];
+      data1[9] = inData[9];
       //data1[10] = pass1; //panel pc password digit 1 & 2
       //data1[11] = pass2; //panel pc password digit 3 & 4
       data1[10] = 0x00;
@@ -1086,33 +1078,14 @@ if (TRACE)
           // Serial1.println(data1[x], HEX);
          }
       }
-      serialCleanup();
-      Serial.write(data1, MessageLength);
-      readSerialQ();
-      if (acData[0]==0x10  && acData[1]==0x25)
-      {
-        PannelConnected = true;
-        trc("panel Login");
-        //sendMQTT(root_topicStatus, "{\"status\":\"Panel NEware direct successfull connecting\"}");
-      }else
-      {
-        trc("Login response number0");
-            trc(String(acData[0],HEX));
-                trc("Login response number1");
-                    trc(String(acData[1],HEX));
+      waitfor010Message=false;
+      Serial.write(data1, MessageLength);   
+          
+       while(!waitfor010Message)
+        {
+      readSerial();
+      yield();
       }
-      if (TRACE)
-      {
-         for (int x = 0; x < MessageLength; x++)
-         {
-           Serial1.print("lastAddress-");
-           Serial1.print(x);
-           Serial1.print("=");
-           Serial1.println(acData[x], HEX);
-         }
-      }
-        
-        
 }
 
 struct inPayload Decodejson(char *Payload){
