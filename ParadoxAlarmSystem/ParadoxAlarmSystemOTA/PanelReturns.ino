@@ -11,6 +11,7 @@ void answer_E0()
                 if (inData[7] == 48 && inData[8] == 3)
                 {
                   PanelConnected = false;
+                  trc("Setting PanelConnected = true");
                 }
                 else if (inData[7] == 48 && inData[8] == 2 )
                 {
@@ -28,6 +29,7 @@ void answer_00()
 void answer_10()
 {
   trc("Answer 0x10 returned");
+  trc("Setting PanelConnected = true");
   PanelConnected = true;
   waitfor010Message=true;
 }

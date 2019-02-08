@@ -153,8 +153,10 @@ void setup() {
   char readymsg[64];
   sprintf(readymsg, "SYSTEM READY %s ", firmware);
   sendCharMQTT(root_topicStatus,readymsg);
-  ArmState();
-
+  
+  Serial.flush();
+  serial_flush_buffer();
+  
 }
 
 void loop() {
@@ -569,7 +571,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     if (data.Subcommand==1)
     {
-     PanelStatus1(false);
+     PanelStatus1();
     }
   }
   else if (data.Command == 0x91  )  {
@@ -766,7 +768,7 @@ void ArmState()
     sendArmStatus();
 }
 
-void PanelStatus1(bool ShowOnlyState)
+void PanelStatus1()
 {
   byte data[MessageLength] = {};
   byte checksum;
@@ -814,8 +816,8 @@ void doLogin(byte pass1, byte pass2){
   }
   data[36] = checksumCalculate(checksum);
    trc("sending command 0x5f to panel");
+    waitfor010Message=false;
     Serial.write(data, MessageLength);
-  
     while(!waitfor010Message)
     {
       readSerial();
@@ -854,10 +856,12 @@ void doLogin(byte pass1, byte pass2){
       Serial.write(data1, MessageLength);         
       while(!waitfor010Message)
       {
+        trc("waiting 0x10 from panel");
         readSerial();
         yield();
-        trc("waiting 0x10 from panel");
+        
       }
+      trc("Panel login complete");
 }
 
 struct inPayload Decodejson(char *Payload){
