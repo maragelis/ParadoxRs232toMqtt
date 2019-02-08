@@ -35,8 +35,8 @@
 
 #define Hassio 1  // 1 enables 0 disables HAssio support
 #define HomeKit 0 
-#define SendAllE0events 1 //If you need all events set to 1 else 0 
-#define SendEventDescriptions 1 //If you need all events set to 1 else 0 Can cause slow downs on heavy systems
+#define SendAllE0events 0 //If you need all events set to 1 else 0 
+#define SendEventDescriptions 0 //If you need all events set to 1 else 0 Can cause slow downs on heavy systems
 
 /*
 HomeKit id 
@@ -120,7 +120,7 @@ void setup() {
   
   WiFi.mode(WIFI_STA);
 
-  Serial.setRxBufferSize(384);
+  //Serial.setRxBufferSize(384);
   Serial.begin(9600);
   Serial.flush(); // Clean up the serial buffer in case previous junk is there
   if (Serial_Swap)
@@ -128,7 +128,7 @@ void setup() {
     Serial.swap();
   }
 
-  Serial1.begin(9600);
+  Serial1.begin(115200);
   Serial1.flush();
   Serial1.setDebugOutput(true);
   trc("serial monitor is up");
@@ -154,7 +154,7 @@ void setup() {
   sprintf(readymsg, "SYSTEM READY %s ", firmware);
   sendCharMQTT(root_topicStatus,readymsg);
   
-  Serial.flush();
+  
   serial_flush_buffer();
   
 }
@@ -318,6 +318,19 @@ void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
       
   } 
 
+  if   ((Hassio || HomeKit) &&  (event==2 && sub_event==4))
+  {
+    if (( homekitStatus.sent != homekitStatus.intArmStatus)   )
+    {
+      sendArmStatus();
+      homekitStatus.sent = homekitStatus.intArmStatus;
+    }
+      
+  } 
+  
+
+  
+
   if ((Hassio ) && (event == 1 || event == 0))
   {
     char ZoneTopic[80];
@@ -357,6 +370,7 @@ void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
     homekitmsg["zoneName"]=String(dummy);
     homekitmsg["state"]=event==1?true:false;
     homekitmsg.printTo(output);
+    
     sendCharMQTT(root_topicArmHomekit,output); 
   }
 
@@ -375,6 +389,7 @@ void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
     root["sub_eventD"]=getSubEvent(event,sub_event);
     root["data"]=dummy;
     root.printTo(outputMQ);
+    
     sendCharMQTT(root_topicOut,outputMQ); 
   }
     
@@ -399,7 +414,10 @@ void sendMQTT(String topicNameSend, String dataStr){
 void sendCharMQTT(char* topic, char* data)
 {
   handleMqttKeepAlive();
-  
+  Serial1.print("Sending MQmessage to topic: ");
+  Serial1.println(topic);
+  Serial1.print("With data: ");
+  Serial1.println(data);
   boolean pubresult = client.publish(topic, data);
   
 }
@@ -430,15 +448,13 @@ void readSerialData() {
       inData[pindex++]=Serial.read();  
   } 
   inData[++pindex]=0x00; // Make it print-friendly
-  
-  traceInData();
 
   if ((inData[0] & 0xF0) == 0xE0)
   { 
     trc("start  answer_E0");
     answer_E0();  
   }
-  else if ((inData[0] & 0xF0) == 0x00)
+  else if ((inData[0] & 0xF0) == 0x00 && inData[4] != 0x00)
   {
     trc("start answer_00");
     answer_00();
@@ -477,8 +493,10 @@ void readSerialData() {
   {
     trc("start serial_flush_buffer");
     serial_flush_buffer();
-    blink(100);
+    
   }
+
+  traceInData();
     
 }
 
@@ -550,10 +568,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
       }
       trc("Json Data is ok ");
       PanelError = false;
-      trc("Start login");
+      
       if (!PanelConnected)
+      {
+        trc("Panel not logged in");
         doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
-      trc("end login");
+        trc(PanelConnected?"Panel logged in":"Panel log on failed");
+      }
       
     }
 
@@ -744,7 +765,6 @@ void PanelStatus0()
   byte checksum;
   memset(data, 0, sizeof(data));
 
-  serial_flush_buffer();
   data[0] = 0x50;
   data[1] = 0x00;
   data[2] = 0x80;
@@ -774,7 +794,7 @@ void PanelStatus1()
   byte checksum;
   memset(data, 0, sizeof(data));
 
-  serial_flush_buffer();
+
   data[0] = 0x50;
   data[1] = 0x00;
   data[2] = 0x80;
@@ -821,7 +841,6 @@ void doLogin(byte pass1, byte pass2){
     while(!waitfor010Message)
     {
       readSerial();
-      yield();
       trc("waiting 0x00 from panel");
 
     }
@@ -857,9 +876,7 @@ void doLogin(byte pass1, byte pass2){
       while(!waitfor010Message)
       {
         trc("waiting 0x10 from panel");
-        readSerial();
-        yield();
-        
+        readSerial();        
       }
       trc("Panel login complete");
 }
@@ -1109,13 +1126,12 @@ void traceInData()
 {
   if (TRACE && (inData[0] & 0xF0) != 0xE0)
   {
-    for (int x = 0; x < MessageLength; x++)
-    {
+    
       Serial1.print("Address-");
-      Serial1.print(x);
+      Serial1.print(1);
       Serial1.print("=");
-      Serial1.println(inData[x], HEX);
-    }
+      Serial1.println(inData[0], HEX);
+    
   }
 }
 

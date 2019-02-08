@@ -11,11 +11,12 @@ void answer_E0()
                 if (inData[7] == 48 && inData[8] == 3)
                 {
                   PanelConnected = false;
-                  trc("Setting PanelConnected = true");
+                  trc("Recieved PanelConnected = false");
                 }
                 else if (inData[7] == 48 && inData[8] == 2 )
                 {
                   PanelConnected = true;
+                   trc("Recieved PanelConnected = true");
                 }
 }
 
