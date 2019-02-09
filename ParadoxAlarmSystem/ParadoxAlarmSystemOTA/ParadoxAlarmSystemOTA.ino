@@ -33,10 +33,10 @@
 #define LED LED_BUILTIN
 #define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 
-#define Hassio 0 // 1 enables 0 disables HAssio support
-#define HomeKit 1 // enables homekit topic
-#define SendAllE0events 0 //If you need all events set to 1 else 0 
-#define SendEventDescriptions 0//If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems
+#define Hassio 1 // 1 enables 0 disables HAssio support
+#define HomeKit 0 // enables homekit topic
+#define SendAllE0events 1 //If you need all events set to 1 else 0 
+#define SendEventDescriptions 1//If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems
 
 /*
 HomeKit id 
@@ -78,7 +78,8 @@ char inData[38]; // Allocate some space for the string
 char outData[38];
 byte pindex = 0; // Index into array; where to store the character
 
-long lastStatusSent = 0;
+long lastReconnectAttempt = 0;
+
 
 ESP8266WebServer HTTP(80);
 
@@ -154,7 +155,7 @@ void setup() {
   char readymsg[64];
   sprintf(readymsg, " {\"firmware\":\"SYSTEM %s\"} ", firmware);
   sendCharMQTT(root_topicStatus,readymsg);
-  
+  lastReconnectAttempt = 0;
   
   serial_flush_buffer();
   
@@ -438,8 +439,8 @@ void readSerial(){
         ArduinoOTA.handle();
       }
       handleMqttKeepAlive();
-      HTTP.handleClient();
-      yield();
+      //HTTP.handleClient();
+      //yield();
   }                            
   {
        readSerialData();       
@@ -1215,11 +1216,21 @@ boolean reconnect() {
 
 void handleMqttKeepAlive()
 {
-  if (!client.connected())
-  {
-    reconnect();
+  
+  if (!client.connected()) {
+    long now = millis();
+    if (now - lastReconnectAttempt > 5000) {
+      lastReconnectAttempt = now;
+      // Attempt to reconnect
+      if (reconnect()) {
+        lastReconnectAttempt = 0;
+      }
+    }
+  } else {
+    // Client connected
+
+    client.loop();
   }
-  client.loop();
 }
 
 void subscribing(String topicNameRec){ // MQTT subscribing to topic
