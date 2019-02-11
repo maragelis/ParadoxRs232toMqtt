@@ -10,7 +10,6 @@
 #include <PubSubClient.h>
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
-#include <NTPtimeESP.h>
 
 #define firmware "PARADOX_2.2.0"
 
@@ -537,8 +536,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   else if (data.Command == 0x30)
   {
-    trc(F("Running Setdate"));
-    panelSetDate();
+    trc(F("No command Setdate"));
+    //panelSetDate();
   }
   
   else if (data.Command != 0x00  )  {
@@ -609,49 +608,49 @@ byte getPanelCommand(String data){
 
 void panelSetDate(){
   
-  NTPtime NTPch("gr.pool.ntp.org");
-  strDateTime dateTime;
-  dateTime = NTPch.getNTPtime(2.0, 1);
+  // NTPtime NTPch("gr.pool.ntp.org");
+  // strDateTime dateTime;
+  // dateTime = NTPch.getNTPtime(2.0, 1);
   
-  if (dateTime.valid)
-  {
+  // if (dateTime.valid)
+  // {
     
-    byte actualHour = dateTime.hour;
-    byte actualMinute = dateTime.minute;
-    byte actualyear = (dateTime.year - 2000) & 0xFF ;
-    byte actualMonth = dateTime.month;
-    byte actualday = dateTime.day;
+  //   byte actualHour = dateTime.hour;
+  //   byte actualMinute = dateTime.minute;
+  //   byte actualyear = (dateTime.year - 2000) & 0xFF ;
+  //   byte actualMonth = dateTime.month;
+  //   byte actualday = dateTime.day;
   
 
-    byte data[MessageLength] = {};
-    byte checksum;
-    memset(data, 0, sizeof(data));
+  //   byte data[MessageLength] = {};
+  //   byte checksum;
+  //   memset(data, 0, sizeof(data));
 
-    data[0] = 0x30;
-    data[4] = 0x21;         //Century
-    data[5] = actualyear;   //Year
-    data[6] = actualMonth;  //Month
-    data[7] = actualday;    //Day
-    data[8] = actualHour;   //Time
-    data[9] = actualMinute; // Minutes
-    data[33] = 0x05;
+  //   data[0] = 0x30;
+  //   data[4] = 0x21;         //Century
+  //   data[5] = actualyear;   //Year
+  //   data[6] = actualMonth;  //Month
+  //   data[7] = actualday;    //Day
+  //   data[8] = actualHour;   //Time
+  //   data[9] = actualMinute; // Minutes
+  //   data[33] = 0x05;
 
-    checksum = 0;
-    for (int x = 0; x < MessageLength - 1; x++)
-    {
-      checksum += data[x];
-    }
+  //   checksum = 0;
+  //   for (int x = 0; x < MessageLength - 1; x++)
+  //   {
+  //     checksum += data[x];
+  //   }
 
-    data[36] = checksumCalculate(checksum);
-    trc("sending setDate command to panel");
-    Serial.write(data, MessageLength);
-    readSerialQuick();
+  //   data[36] = checksumCalculate(checksum);
+  //   trc("sending setDate command to panel");
+  //   Serial.write(data, MessageLength);
+  //   readSerialQuick();
     
-  }else
-  {
-    trc(F("ERROR getting NTP Date "));
-    sendMQTT(root_topicStatus,"{\"status\":\"ERROR getting NTP Date  \" }");
-  }
+  // }else
+  // {
+  //   trc(F("ERROR getting NTP Date "));
+  //   sendMQTT(root_topicStatus,"{\"status\":\"ERROR getting NTP Date  \" }");
+  // }
 }
 
 void ControlPanel(inPayload data){
