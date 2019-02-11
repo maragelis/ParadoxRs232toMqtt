@@ -50,8 +50,6 @@ Characteristic.SecuritySystemCurrentState.ALARM_TRIGGERED = 4;
 bool TRACE = 0;
 bool OTAUpdate = 0;
 
-NTPtime NTPch("gr.pool.ntp.org");
-strDateTime dateTime;
 
  char *root_topicOut = "paradoxdCTL/out";
  char *root_topicStatus = "paradoxdCTL/status";
@@ -72,10 +70,8 @@ bool PanelConnected =false;
 bool PanelError = false;
 bool RunningCommand=false;
 bool JsonParseError=false;
-bool waitfor010Message=false;
  
 char inData[38]; // Allocate some space for the string
-char outData[38];
 byte pindex = 0; // Index into array; where to store the character
 
 long lastReconnectAttempt = 0;
@@ -91,14 +87,6 @@ struct inPayload
   byte Subcommand;
  } ;
  
-typedef struct {
-     byte armstatus;
-     byte event;
-     byte sub_event;    
-     String dummy;
-     
- } Payload;
-
 
  typedef struct {
      int intArmStatus;
@@ -110,12 +98,6 @@ typedef struct {
  
  paradoxArm homekitStatus;
  
- Payload paradox;
-
-  
-
-
-//JsonObject& zones = root.createNestedObject("zones");
 
 void setup() {
   pinMode(LED, OUTPUT);
@@ -149,33 +131,26 @@ void setup() {
   trc("Finnished wifi setup");
   delay(1500);
   
-  NTPch.setRecvTimeout(5);
-  dateTime = NTPch.getNTPtime(2.0, 1);
-
   char readymsg[64];
   sprintf(readymsg, " {\"firmware\":\"SYSTEM %s\"} ", firmware);
   sendCharMQTT(root_topicStatus,readymsg);
   lastReconnectAttempt = 0;
-  
   serial_flush_buffer();
-  
+    
 }
 
 void loop() {
    readSerial();    
 }
 
-
-byte checksumCalculate(byte checksum) 
-{
+byte checksumCalculate(byte checksum) {
     while (checksum > 255) {
       checksum = checksum - (checksum / 256) * 256;
     }
   return checksum & 0xFF;
 }
 
-void StartSSDP()
-{
+void StartSSDP(){
   if (WiFi.waitForConnectResult() == WL_CONNECTED) {
 
     Serial1.printf("Starting HTTP...\n");
@@ -222,14 +197,11 @@ void StartSSDP()
   }
 }
 
-
-
-void updateArmStatus()
-{
+void updateArmStatus(byte event, byte sub_event){
   bool datachanged = false;
-  if (paradox.event == 2)
+  if (event == 2)
   {
-    switch (paradox.sub_event)
+    switch (sub_event)
     {
       case 4:
         hassioStatus.stringArmStatus = "triggered";
@@ -258,9 +230,9 @@ void updateArmStatus()
       default : break;
     }
   }
-  else if (paradox.event == 6)
+  else if (event == 6)
   {
-    if (paradox.sub_event == 3)
+    if (sub_event == 3)
     {
       datachanged=true;
       hassioStatus.stringArmStatus = "armed_home";
@@ -268,22 +240,19 @@ void updateArmStatus()
       homekitStatus.intArmStatus = 0;
       
     }
-    else if ( paradox.sub_event == 4)
+    else if ( sub_event == 4)
     {
       datachanged=true;
       hassioStatus.stringArmStatus = "armed_home";
       homekitStatus.stringArmStatus = "NIGHT_ARM";
-      homekitStatus.intArmStatus = 2;
-      
+      homekitStatus.intArmStatus = 2; 
     }
-    
   }
   
         
 }
 
-void sendArmStatus()
-{
+void sendArmStatus(){
   char output[128];
   StaticJsonBuffer<128> jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
@@ -300,16 +269,13 @@ void sendArmStatus()
         }
 }
 
-
-void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
-{
+void processMessage( byte event, byte sub_event, String dummy ){
   if ((Hassio || HomeKit) && (event == 2 || event == 6))
   {
-    updateArmStatus(); 
-      
+    updateArmStatus(event,sub_event); 
   }   
 
-  if   ((Hassio || HomeKit) && (event == 30 || (event==2 && sub_event==11)))
+  if   (Hassio || HomeKit) 
   {
     if (( homekitStatus.sent != homekitStatus.intArmStatus)   )
     {
@@ -317,21 +283,8 @@ void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
       homekitStatus.sent = homekitStatus.intArmStatus;
     }
       
-  } 
-
-  if   ((Hassio || HomeKit) &&  (event==2 && sub_event==4))
-  {
-    if (( homekitStatus.sent != homekitStatus.intArmStatus)   )
-    {
-      sendArmStatus();
-      homekitStatus.sent = homekitStatus.intArmStatus;
-    }
-      
-  } 
+  }
   
-
-  
-
   if ((Hassio ) && (event == 1 || event == 0))
   {
     char ZoneTopic[80];
@@ -343,21 +296,15 @@ void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
     //String state_topic = String(root_topicHassio) + "/state";
     //state_topic.toCharArray(stateTopic, 80);
 
-    if (event == 1 || event == 0)
-    {
+    
+    zone = String(ZoneTopic) + String(sub_event);
+    zone.toCharArray(ZoneTopic, 80);
 
-      zone = String(ZoneTopic) + String(sub_event);
-      zone.toCharArray(ZoneTopic, 80);
+    String zonestatus = event==1?"ON":"OFF";
 
-      String zonestatus="OFF";
 
-      if (event==1 )
-      {
-        zonestatus = "ON";
-      }
-
-      sendMQTT(ZoneTopic, zonestatus);
-    }
+    sendMQTT(ZoneTopic, zonestatus);
+    
     
   }
   
@@ -396,8 +343,6 @@ void processMessage(byte armstatus, byte event, byte sub_event, String dummy )
     
 }
 
-
-
 void sendMQTT(String topicNameSend, String dataStr){
     handleMqttKeepAlive();
     char topicStrSend[40];
@@ -416,8 +361,7 @@ void sendMQTT(String topicNameSend, String dataStr){
     }
 }
 
-void sendCharMQTT(char* topic, char* data)
-{
+void sendCharMQTT(char* topic, char* data){
   handleMqttKeepAlive();
   if (TRACE)
   {
@@ -430,7 +374,6 @@ void sendCharMQTT(char* topic, char* data)
   
 }
 
-
 void readSerial(){
   while (Serial.available()<37  )  
   { 
@@ -438,64 +381,57 @@ void readSerial(){
       {
         ArduinoOTA.handle();
       }
+      
+      HTTP.handleClient();
       handleMqttKeepAlive();
-      //HTTP.handleClient();
-      //yield();
+      
   }                            
   {
-       readSerialData();       
-  }
-
-}
-
-void answer_E0()
-{
-                paradox.armstatus = inData[0];
-                paradox.event = inData[7];
-                paradox.sub_event = inData[8];
-                String zlabel = String(inData[15]) + String(inData[16]) + String(inData[17]) + String(inData[18]) + String(inData[19]) + String(inData[20]) + String(inData[21]) + String(inData[22]) + String(inData[23]) + String(inData[24]) + String(inData[25]) + String(inData[26]) + String(inData[27]) + String(inData[28]) + String(inData[29]) + String(inData[30]);
-                if (inData[14]!= 1){
-                paradox.dummy = zlabel;
-                }
-                processMessage(paradox.armstatus, paradox.event, paradox.sub_event, paradox.dummy);
-                if (inData[7] == 48 && inData[8] == 3)
-                {
-                  PanelConnected = false;
-                  trc(F("Recieved PanelConnected = false"));
-                }
-                else if (inData[7] == 48 && inData[8] == 2 )
-                {
-                  PanelConnected = true;
-                   trc(F("Recieved PanelConnected = true"));
-                }
-}
-
-
-void readSerialData() {
-  pindex=0;
+    pindex=0;
   
-  while(pindex < 37) // Paradox packet is 37 bytes 
-  {
+    while(pindex < 37) // Paradox packet is 37 bytes 
+    {
       inData[pindex++]=Serial.read();  
-  } 
-  inData[++pindex]=0x00; // Make it print-friendly
+    } 
+    inData[++pindex]=0x00; // Make it print-friendly
 
-  if ((inData[0] & 0xF0) == 0xE0)
-  { 
-    trc(F("start  answer_E0"));
-    answer_E0();  
+    if ((inData[0] & 0xF0) == 0xE0)
+    { 
+      trc(F("start  answer_E0"));
+      answer_E0();  
+    }
+    else
+    {
+      trc(F("start serial_flush_buffer"));
+      serial_flush_buffer();   
+    }
+    
+    traceInData();   
   }
-  
-  
-  else
+
+}
+
+void answer_E0(){
+                
+  String zlabel = String(inData[15]) + String(inData[16]) + String(inData[17]) + String(inData[18]) + String(inData[19]) + String(inData[20]) + String(inData[21]) + String(inData[22]) + String(inData[23]) + String(inData[24]) + String(inData[25]) + String(inData[26]) + String(inData[27]) + String(inData[28]) + String(inData[29]) + String(inData[30]);
+  if (inData[14]!= 1){
+    zlabel;
+  }else
   {
-    trc(F("start serial_flush_buffer"));
-    serial_flush_buffer();
-    
+    zlabel=" ";
   }
-
-  traceInData();
-    
+  
+  processMessage( inData[7], inData[8], zlabel);
+  if (inData[7] == 48 && inData[8] == 3)
+  {
+    PanelConnected = false;
+    trc(F("Recieved PanelConnected = false"));
+  }
+  else if (inData[7] == 48 && inData[8] == 2 )
+  {
+    PanelConnected = true;
+      trc(F("Recieved PanelConnected = true"));
+  }
 }
 
 void blink(int duration) {
@@ -618,7 +554,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
   
 }
 
-
 byte getPanelCommand(String data){
   byte retval=0x00;
 
@@ -672,10 +607,10 @@ byte getPanelCommand(String data){
   return retval;
 }
 
-
-
 void panelSetDate(){
-
+  
+  NTPtime NTPch("gr.pool.ntp.org");
+  strDateTime dateTime;
   dateTime = NTPch.getNTPtime(2.0, 1);
   
   if (dateTime.valid)
@@ -710,6 +645,7 @@ void panelSetDate(){
     data[36] = checksumCalculate(checksum);
     trc("sending setDate command to panel");
     Serial.write(data, MessageLength);
+    readSerialQuick();
     
   }else
   {
@@ -717,7 +653,6 @@ void panelSetDate(){
     sendMQTT(root_topicStatus,"{\"status\":\"ERROR getting NTP Date  \" }");
   }
 }
-
 
 void ControlPanel(inPayload data){
   byte armdata[MessageLength] = {};
@@ -739,6 +674,7 @@ void ControlPanel(inPayload data){
   
   trc(F("sending Arm command to panel"));
   Serial.write(armdata, MessageLength);
+  readSerialQuick();
 }
 
 void PanelDisconnect(){
@@ -759,8 +695,7 @@ void PanelDisconnect(){
   Serial.write(data, MessageLength);
 }
 
-void PanelStatus0()
-{
+void PanelStatus0(){
   byte data[MessageLength] = {};
   byte checksum;
   memset(data, 0, sizeof(data));
@@ -780,20 +715,7 @@ void PanelStatus0()
   trc(F("sending Panel Status 0 command to panel"));
   Serial.write(data, MessageLength);  
 
-            
-      while (Serial.available()<37  )  
-      { 
-         
-      }                            
-      {
-        pindex=0;
-    
-        while(pindex < 37) // Paradox packet is 37 bytes 
-        {
-            inData[pindex++]=Serial.read();  
-        } 
-        inData[++pindex]=0x00; // Make it print-friendly
-      }
+   readSerialQuick();
    bool Timer_Loss = bitRead(inData[4],7);
     bool PowerTrouble  = bitRead(inData[4],1);
     bool ACFailureTroubleIndicator = bitRead(inData[6],1);
@@ -804,7 +726,7 @@ void PanelStatus0()
     int BatteryDCVoltageLevel=inData[17];
 
     
-        StaticJsonBuffer<512> jsonBuffer;
+        StaticJsonBuffer<256> jsonBuffer;
         JsonObject& root = jsonBuffer.createObject();
         root["Timer_Loss"]=String(Timer_Loss);
         root["PowerTrouble"]=String(PowerTrouble);
@@ -813,7 +735,7 @@ void PanelStatus0()
         root["PSUDCVoltage"]=String(PowerSupplyDCVoltageLevel);
         root["BatteryDCVoltage"]=String(BatteryDCVoltageLevel);
         root["BatteryTrouble"]=String(NoLowBatteryTroubleIndicator);
-        char output[512];
+        char output[256];
         root.printTo(output);
         sendCharMQTT(root_topicOut,output);  
     
@@ -822,7 +744,7 @@ void PanelStatus0()
         
     for (int i = 19 ; i <= 22;i++)
     {
-      StaticJsonBuffer<256> jsonBuffer;
+      StaticJsonBuffer<128> jsonBuffer;
         JsonObject& zonemq = jsonBuffer.createObject();
      for (int j = 0 ; j < 8;j++) 
        {
@@ -834,7 +756,7 @@ void PanelStatus0()
         //trc (retval);
        
        }
-       char Zonemq[256];
+       char Zonemq[128];
         zonemq.printTo(Zonemq);
         sendCharMQTT(root_topicOut,Zonemq); 
     }
@@ -843,15 +765,11 @@ void PanelStatus0()
    
 }
 
-
-
-void ArmState()
-{
+void ArmState(){
     sendArmStatus();
 }
 
-void PanelStatus1()
-{
+void PanelStatus1(){
   byte data[MessageLength] = {};
   byte checksum;
   memset(data, 0, sizeof(data));
@@ -871,20 +789,8 @@ void PanelStatus1()
   data[36] = checksumCalculate(checksum);
   trc(F("sending Panel Status 1 command to panel"));
   Serial.write(data, MessageLength);
- 
-      while (Serial.available()<37  )  
-      { 
-         
-      }                            
-      {
-        pindex=0;
-    
-        while(pindex < 37) // Paradox packet is 37 bytes 
-        {
-            inData[pindex++]=Serial.read();  
-        } 
-        inData[++pindex]=0x00; // Make it print-friendly
-      }
+  readSerialQuick();
+
   bool Fire=bitRead(inData[17],7);
   bool Audible=bitRead(inData[17],6);
   bool Silent=bitRead(inData[17],5);
@@ -907,7 +813,6 @@ void PanelStatus1()
             
         panelstatus1.printTo(panelst);
         sendCharMQTT(root_topicOut,panelst);  
-
 
      if (AlarmFlg)
     {
@@ -947,7 +852,22 @@ void PanelStatus1()
     }
     //sendMQTT(root_topicArmStatus,retval);
     sendArmStatus();
+}
 
+void readSerialQuick(){
+ while (Serial.available()<37  )  
+  { 
+     
+  }                            
+  {
+      pindex=0;
+  
+      while(pindex < 37) // Paradox packet is 37 bytes 
+      {
+          inData[pindex++]=Serial.read();  
+      } 
+      inData[++pindex]=0x00; // Make it print-friendly
+  }
 }
 
 void doLogin(byte pass1, byte pass2){
@@ -974,21 +894,9 @@ void doLogin(byte pass1, byte pass2){
   }
   data[36] = checksumCalculate(checksum);
    trc(F("sending command 0x5f to panel"));
-    waitfor010Message=false;
+   
     Serial.write(data, MessageLength);
-   while (Serial.available()<37  )  
-  { 
-     
-  }                            
-  {
-      pindex=0;
-  
-      while(pindex < 37) // Paradox packet is 37 bytes 
-      {
-          inData[pindex++]=Serial.read();  
-      } 
-      inData[++pindex]=0x00; // Make it print-friendly
-  }
+    readSerialQuick();
 
     
     trc(F("got callback from 0x5f command"));
@@ -1015,29 +923,16 @@ void doLogin(byte pass1, byte pass2){
       }
       data1[36] = checksumCalculate(checksum);
       
-      waitfor010Message=false;
       trc("sending command 0x00 to panel");
 
       Serial.write(data1, MessageLength);         
-      while (Serial.available()<37  )  
-      { 
-         
-      }                            
+      readSerialQuick();
+      if ((inData[0] & 0xF0) == 0x10)
       {
-      pindex=0;
-  
-      while(pindex < 37) // Paradox packet is 37 bytes 
-      {
-          inData[pindex++]=Serial.read();  
-      } 
-      inData[++pindex]=0x00; // Make it print-friendly
-          if ((inData[0] & 0xF0) == 0x10)
-          {
-            PanelConnected = true;
-          }
-      
+        PanelConnected = true;
       }
-
+      
+      
       trc(F("Panel login complete"));
 }
 
@@ -1214,9 +1109,8 @@ boolean reconnect() {
   return client.connected();
 }
 
-void handleMqttKeepAlive()
-{
-  
+void handleMqttKeepAlive(){
+
   if (!client.connected()) {
     long now = millis();
     if (now - lastReconnectAttempt > 5000) {
@@ -1228,7 +1122,6 @@ void handleMqttKeepAlive()
     }
   } else {
     // Client connected
-
     client.loop();
   }
 }
@@ -1284,7 +1177,6 @@ void mountfs(){
   }
 }
 
-
 void trc(String msg){
   if (TRACE) {
   Serial1.println(msg);
@@ -1292,8 +1184,7 @@ void trc(String msg){
   }
 }
 
-void traceInData()
-{
+void traceInData(){
   if (TRACE && (inData[0] & 0xF0) != 0xE0)
   {
     
