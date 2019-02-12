@@ -290,27 +290,12 @@ void processMessage( byte event, byte sub_event, String dummy ){
     updateArmStatus(event,sub_event); 
   }
 
-  if ((Hassio || HomeKit) &&  (event == 2 and sub_event == 12) || (event == 6 and (sub_event == 4 || sub_event == 3))) // arm events
-  {
-    if (event == 2 and sub_event == 12)
+  if ((Hassio || HomeKit) &&  (event != 2 and sub_event != 12) ) //|| (event == 6 and (sub_event == 4 || sub_event == 3))) // arm events
+  {  
+    if ((Hassio || HomeKit) && (homekitStatus.sent != homekitStatus.intArmStatus))
     {
-      armStatusDelay = millis();
-    }
-    long deleynow = millis();
-    if (deleynow - armStatusDelay > 10){
-      if ((homekitStatus.sent != homekitStatus.intArmStatus))
-      {
-        sendArmStatus();
-        homekitStatus.sent = homekitStatus.intArmStatus;
-      }
-    }
-  }
-  else
-  {
-    if ((homekitStatus.sent != homekitStatus.intArmStatus))
-      {
-        sendArmStatus();
-        homekitStatus.sent = homekitStatus.intArmStatus;
+      sendArmStatus();
+      homekitStatus.sent = homekitStatus.intArmStatus;
       }
   }
 
