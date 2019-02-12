@@ -434,7 +434,7 @@ void answer_E0(){
     zlabel=" ";
   }
   
-  processMessage( inData[7], inData[8], "");
+  processMessage( inData[7], inData[8], zlabel);
   if (inData[7] == 48 && inData[8] == 3)
   {
     PanelConnected = false;
