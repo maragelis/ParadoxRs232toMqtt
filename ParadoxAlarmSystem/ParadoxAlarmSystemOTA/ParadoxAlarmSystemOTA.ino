@@ -257,7 +257,7 @@ void updateArmStatus(byte event, byte sub_event){
     else if ( sub_event == 4)
     {
       datachanged=true;
-      hassioStatus.stringArmStatus = "armed_night";
+      hassioStatus.stringArmStatus = "armed_home";
       homekitStatus.stringArmStatus = "NIGHT_ARM";
       homekitStatus.intArmStatus = 2; 
     }
@@ -290,9 +290,10 @@ void processMessage( byte event, byte sub_event, String dummy ){
     updateArmStatus(event,sub_event); 
   }
 
-  if ((Hassio || HomeKit) &&  (event != 2 and sub_event != 12) ) //|| (event == 6 and (sub_event == 4 || sub_event == 3))) // arm events
+  //Dont send the arm event now send it on next message, because it might be updated to sleep or stay.
+  if ((Hassio || HomeKit) &&  (event != 2 and sub_event != 12) )  
   {  
-    if ((Hassio || HomeKit) && (homekitStatus.sent != homekitStatus.intArmStatus))
+    if (homekitStatus.sent != homekitStatus.intArmStatus)
     {
       sendArmStatus();
       homekitStatus.sent = homekitStatus.intArmStatus;
@@ -303,24 +304,14 @@ void processMessage( byte event, byte sub_event, String dummy ){
   if ((Hassio ) && (event == 1 || event == 0))
   {
     char ZoneTopic[80];
-    char stateTopic[80];
-
     String zone = String(root_topicHassio) + "/zone";
     zone.toCharArray(ZoneTopic, 80);
-
-    //String state_topic = String(root_topicHassio) + "/state";
-    //state_topic.toCharArray(stateTopic, 80);
-
-    
     zone = String(ZoneTopic) + String(sub_event);
     zone.toCharArray(ZoneTopic, 80);
 
     String zonestatus = event==1?"ON":"OFF";
 
-
-    sendMQTT(ZoneTopic, zonestatus, false);
-    
-    
+    sendMQTT(ZoneTopic, zonestatus, true);    
   }
   
   if ((HomeKit ) && (event == 1 || event == 0))
