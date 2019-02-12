@@ -95,6 +95,11 @@ Command can be one of the following
 <br> 
 
 
+20190212 Added retain message on hassio/Arm topic<br>
+	Added the ability to add credentials to mqtt.<br>
+	Added Homekit topic for Homebridge plugin. (comming soon). <br>	
+	
+
 20190130 added PGM support (command "PGM_ON" subcomand "0-31)
   
 20190114 V2 Live (Homeassistant)
