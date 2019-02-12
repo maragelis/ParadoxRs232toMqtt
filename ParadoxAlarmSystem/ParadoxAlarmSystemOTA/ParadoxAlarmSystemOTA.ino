@@ -10,16 +10,18 @@
 #include <PubSubClient.h>
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
+#include <NTPtimeESP.h>
 
-
-#define firmware "PARADOX_2.2.1"
+#define firmware "PARADOX_2.2.2"
 
 #define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
 #define mqtt_user         ""
 #define mqtt_password     "" 
 
-#define Hostname          "paradoxdCTL" //not more than 15 
+#define Hostname          "paradoxdCTL" //not more than 15
+
+#define timezone 2.0 //for setdate command
 
 #define Stay_Arm  0x01
 #define Stay_Arm2 0x02
@@ -35,7 +37,7 @@
 #define LED LED_BUILTIN
 #define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 
-#define Hassio 1 // 1 enables 0 disables HAssio support
+#define Hassio 1 // 1 enables 0 disables Hassio-Openhab support
 #define HomeKit 0 // enables homekit topic
 #define SendAllE0events 1 //If you need all events set to 1 else 0 
 #define SendEventDescriptions 1//If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems
@@ -77,7 +79,10 @@ char inData[38]; // Allocate some space for the string
 byte pindex = 0; // Index into array; where to store the character
 
 long lastReconnectAttempt = 0;
+long armStatusDelay =0;
 
+NTPtime NTPch("gr.pool.ntp.org");
+strDateTime dateTime;
 
 ESP8266WebServer HTTP(80);
 
@@ -252,7 +257,7 @@ void updateArmStatus(byte event, byte sub_event){
     else if ( sub_event == 4)
     {
       datachanged=true;
-      hassioStatus.stringArmStatus = "armed_home";
+      hassioStatus.stringArmStatus = "armed_night";
       homekitStatus.stringArmStatus = "NIGHT_ARM";
       homekitStatus.intArmStatus = 2; 
     }
@@ -278,22 +283,38 @@ void sendArmStatus(){
         }
 }
 
+
 void processMessage( byte event, byte sub_event, String dummy ){
   if ((Hassio || HomeKit) && (event == 2 || event == 6))
   {
     updateArmStatus(event,sub_event); 
-  }   
-
-  if   (Hassio || HomeKit) 
-  {
-    if (( homekitStatus.sent != homekitStatus.intArmStatus)   )
-    {
-      sendArmStatus();
-      homekitStatus.sent = homekitStatus.intArmStatus;
-    }
-      
   }
-  
+
+  if ((Hassio || HomeKit) &&  (event == 2 and sub_event == 12) || (event == 6 and (sub_event == 4 || sub_event == 3))) // arm events
+  {
+    if (event == 2 and sub_event == 12)
+    {
+      armStatusDelay = millis();
+    }
+    long deleynow = millis();
+    if (deleynow - armStatusDelay > 10){
+      if ((homekitStatus.sent != homekitStatus.intArmStatus))
+      {
+        sendArmStatus();
+        homekitStatus.sent = homekitStatus.intArmStatus;
+      }
+    }
+  }
+  else
+  {
+    if ((homekitStatus.sent != homekitStatus.intArmStatus))
+      {
+        sendArmStatus();
+        homekitStatus.sent = homekitStatus.intArmStatus;
+      }
+  }
+
+ 
   if ((Hassio ) && (event == 1 || event == 0))
   {
     char ZoneTopic[80];
@@ -349,7 +370,6 @@ void processMessage( byte event, byte sub_event, String dummy ){
     
     sendCharMQTT(root_topicOut,outputMQ,false); 
   }
-    
 }
 
 void sendMQTT(String topicNameSend, String dataStr,bool  retain){
@@ -386,10 +406,10 @@ void sendCharMQTT(char* topic, char* data , bool retain){
 void readSerial(){
   while (Serial.available()<37  )  
   { 
-    while(RunningCommand)
+    while (RunningCommand)
     {
       yield();
-    }
+   }
       
       if (OTAUpdate)
       {
@@ -426,12 +446,15 @@ void readSerial(){
 
 void answer_E0(){
                 
-  String zlabel = String(inData[15]) + String(inData[16]) + String(inData[17]) + String(inData[18]) + String(inData[19]) + String(inData[20]) + String(inData[21]) + String(inData[22]) + String(inData[23]) + String(inData[24]) + String(inData[25]) + String(inData[26]) + String(inData[27]) + String(inData[28]) + String(inData[29]) + String(inData[30]);
-  if (inData[14]!= 1){
-    zlabel.trim();
-  }else
+  String zlabel=" ";
+
+  if (inData[14] != 1)
   {
-    zlabel=" ";
+    for (int k = 15; k <= 30; k++)
+    {
+      zlabel = zlabel + String(inData[k]);
+    }
+    zlabel.trim();
   }
   
   processMessage( inData[7], inData[8], zlabel);
@@ -550,8 +573,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   else if (data.Command == 0x30)
   {
-    trc(F("No command Setdate"));
-    //panelSetDate();
+    trc(F("Command Setdate"));
+    panelSetDate();
   }
   
   else if (data.Command != 0x00  )  {
@@ -622,49 +645,47 @@ byte getPanelCommand(String data){
 
 void panelSetDate(){
   
-  // NTPtime NTPch("gr.pool.ntp.org");
-  // strDateTime dateTime;
-  // dateTime = NTPch.getNTPtime(2.0, 1);
+  dateTime = NTPch.getNTPtime(timezone, 1);
   
-  // if (dateTime.valid)
-  // {
+  if (dateTime.valid)
+  {
     
-  //   byte actualHour = dateTime.hour;
-  //   byte actualMinute = dateTime.minute;
-  //   byte actualyear = (dateTime.year - 2000) & 0xFF ;
-  //   byte actualMonth = dateTime.month;
-  //   byte actualday = dateTime.day;
+    byte actualHour = dateTime.hour;
+    byte actualMinute = dateTime.minute;
+    byte actualyear = (dateTime.year - 2000) & 0xFF ;
+    byte actualMonth = dateTime.month;
+    byte actualday = dateTime.day;
   
 
-  //   byte data[MessageLength] = {};
-  //   byte checksum;
-  //   memset(data, 0, sizeof(data));
+    byte data[MessageLength] = {};
+    byte checksum;
+    memset(data, 0, sizeof(data));
 
-  //   data[0] = 0x30;
-  //   data[4] = 0x21;         //Century
-  //   data[5] = actualyear;   //Year
-  //   data[6] = actualMonth;  //Month
-  //   data[7] = actualday;    //Day
-  //   data[8] = actualHour;   //Time
-  //   data[9] = actualMinute; // Minutes
-  //   data[33] = 0x05;
+    data[0] = 0x30;
+    data[4] = 0x21;         //Century
+    data[5] = actualyear;   //Year
+    data[6] = actualMonth;  //Month
+    data[7] = actualday;    //Day
+    data[8] = actualHour;   //Time
+    data[9] = actualMinute; // Minutes
+    data[33] = 0x05;
 
-  //   checksum = 0;
-  //   for (int x = 0; x < MessageLength - 1; x++)
-  //   {
-  //     checksum += data[x];
-  //   }
+    checksum = 0;
+    for (int x = 0; x < MessageLength - 1; x++)
+    {
+      checksum += data[x];
+    }
 
-  //   data[36] = checksumCalculate(checksum);
-  //   trc("sending setDate command to panel");
-  //   Serial.write(data, MessageLength);
-  //   readSerialQuick();
+    data[36] = checksumCalculate(checksum);
+    trc("sending setDate command to panel");
+    Serial.write(data, MessageLength);
+    readSerialQuick();
     
-  // }else
-  // {
-  //   trc(F("ERROR getting NTP Date "));
-  //   sendMQTT(root_topicStatus,"{\"status\":\"ERROR getting NTP Date  \" }", false);
-  // }
+  }else
+  {
+    trc(F("ERROR getting NTP Date "));
+    sendMQTT(root_topicStatus,"{\"status\":\"ERROR getting NTP Date  \" }", false);
+  }
 }
 
 void ControlPanel(inPayload data){
