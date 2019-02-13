@@ -674,7 +674,7 @@ void ControlPanel(inPayload data){
 
   armdata[0] = 0x40;
   armdata[2] = data.Command;
-  armdata[3] = data.Subcommand;;
+  armdata[3] = data.Subcommand;
   armdata[33] = 0x05;
   armdata[34] = 0x00;
   armdata[35] = 0x00;
