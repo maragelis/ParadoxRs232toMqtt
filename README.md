@@ -11,7 +11,7 @@ This project uses a wemos esp8266 to read events of the serial bus of any Parado
   
 <br> Arduino IDE settings<br>
 
-Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 128<br>
+Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 256<br>
 Libs <br>
 wifimanager<br>
 pubsubclient<br>
