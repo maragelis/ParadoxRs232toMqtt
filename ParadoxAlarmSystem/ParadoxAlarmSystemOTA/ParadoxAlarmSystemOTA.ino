@@ -35,12 +35,19 @@
 #define MessageLength 37
 
 #define LED LED_BUILTIN
-#define Serial_Swap 1 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
+
+//if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
+//Default is to use onboard RX/TX 
+#define Serial_Swap 1 
 
 #define Hassio 1 // 1 enables 0 disables Hassio-Openhab support
 #define HomeKit 0 // enables homekit topic
 #define SendAllE0events 1 //If you need all events set to 1 else 0 
-bool SendEventDescriptions = 1;//If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems
+
+//If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems.
+//Can also be enabled by sending sendeventdescriptions=1 to in topic.
+//Enable it here if you want it enabled after a reboot
+bool SendEventDescriptions = 1;
 
 /*
 HomeKit id 
@@ -413,8 +420,6 @@ void readSerial(){
       answer_E0();  
     }
     
-   
-    
     traceInData();   
   }
 
@@ -473,68 +478,74 @@ void callback(char* topic, byte* payload, unsigned int length) {
   inPayload data;
   
   trc("JSON Returned! ====");
-  String callbackstring = String((char *)payload);
+  String progEvent = String((char *)payload);
   
-  if (callbackstring == "Trace=1" || callbackstring == "trace=1" || callbackstring=="TRACE=1")
+  if (progEvent.indexOf("=")>0)
   {
-    TRACE=1;
-    Serial1.println("Trace is ON");
-    return ;
-  }
-  else if (callbackstring == "Trace=0" || callbackstring == "trace=0" || callbackstring=="TRACE=0")
-  {
-    TRACE=0;
-    Serial1.println("Trace is OFF");
-    return ;
-  }
-  else if (callbackstring == "OTA=0")
-  {
-    OTAUpdate=0;
-    Serial1.println("OTA update is OFF");
-    return ;
-  }
-  else if (callbackstring == "OTA=1")
-  {
-    OTAUpdate=1;
-    Serial1.println("OTA update is ON");
-    return ;
-  }
-  else if (callbackstring == "sendeventdescriptions=1")
-  {
-     SendEventDescriptions = 1;
-  }
-  else if (callbackstring == "sendeventdescriptions=0")
-  {
-    SendEventDescriptions = 0;
-  }
+    progEvent.toLowerCase();
   
-  else if (callbackstring=="")
-  {
-    trc(F("No payload data"));
-    return;
-  }
-    else
+    if (progEvent=="trace=1")
     {
-      trc(F("parsing Recievied Json Data"));
-      data = Decodejson((char *)payload);
-      if (JsonParseError)
-      {
-        trc(F("Error parsing Json Command") );
-        JsonParseError=false;
-        return;
-      }
-      trc(F("Json Data is ok "));
-      PanelError = false;
-       RunningCommand=true;
-      if (!PanelConnected)
-      {
-        trc(F("Panel not logged in"));
-        doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
-        trc(PanelConnected?"Panel logged in":"Panel log on failed");
-      }
+      TRACE=1;
+      Serial1.println("Trace is ON");
+    }
+    else if (progEvent == "trace=0")
+    {
+      TRACE=0;
+      Serial1.println("Trace is OFF");
       
     }
-
+    else if (progEvent == "ota=0")
+    {
+      OTAUpdate=0;
+      Serial1.println("OTA update is OFF");
+      
+    }
+    else if (progEvent == "ota=1")
+    {
+      OTAUpdate=1;
+      Serial1.println("OTA update is ON");
+      
+    }
+    else if (progEvent == "sendeventdescriptions=1")
+    {
+      SendEventDescriptions = 1;
+      Serial1.println("SendEventDescriptions is ON");
+      
+    }
+    else if (progEvent == "sendeventdescriptions=0")
+    {
+      SendEventDescriptions = 0;
+      Serial1.println("SendEventDescriptions is OFF");
+      
+    }
+    
+    else 
+    {
+      trc(F("error in ProgEvent payload "));
+      
+    }
+    return ;
+  }
+    
+  trc(F("parsing Recievied Json Data"));
+  data = Decodejson((char *)payload);
+  if (JsonParseError)
+  {
+    trc(F("Error parsing Json Command") );
+    JsonParseError=false;
+    return;
+  }
+  trc(F("Json Data is ok "));
+  PanelError = false;
+    RunningCommand=true;
+  if (!PanelConnected)
+  {
+    trc(F("Panel not logged in"));
+    doLogin(data.PcPasswordFirst2Digits, data.PcPasswordSecond2Digits);
+    trc(PanelConnected?"Panel logged in":"Panel login failed");
+  }
+      
  
   if (!PanelConnected)
   {
