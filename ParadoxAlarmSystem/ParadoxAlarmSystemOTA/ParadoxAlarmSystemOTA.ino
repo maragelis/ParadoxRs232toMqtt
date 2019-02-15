@@ -12,7 +12,7 @@
 #include <ArduinoJson.h>
 #include <NTPtimeESP.h>
 
-#define firmware "PARADOX_2.2.2"
+#define firmware "PARADOX_2.2.3"
 
 #define mqtt_server       "192.168.2.230"
 #define mqtt_port         "1883"
@@ -779,9 +779,10 @@ void PanelStatus0(){
         
     for (int i = 19 ; i <= 22;i++)
     {
-      StaticJsonBuffer<128> jsonBuffer;
+      
+      StaticJsonBuffer<256> jsonBuffer;
         JsonObject& zonemq = jsonBuffer.createObject();
-     for (int j = 0 ; j < 8;j++) 
+     for (int j = 0 ; j <= 8;j++) 
        {
          Zonename = "Z" + String(++zcnt);
 
@@ -791,7 +792,7 @@ void PanelStatus0(){
         //trc (retval);
        
        }
-       char Zonemq[128];
+       char Zonemq[256];
         zonemq.printTo(Zonemq);
         sendCharMQTT(root_topicOut,Zonemq,false); 
     }
