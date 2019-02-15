@@ -40,7 +40,7 @@
 #define Hassio 1 // 1 enables 0 disables Hassio-Openhab support
 #define HomeKit 0 // enables homekit topic
 #define SendAllE0events 1 //If you need all events set to 1 else 0 
-#define SendEventDescriptions 1//If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems
+bool SendEventDescriptions = 1;//If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems
 
 /*
 HomeKit id 
@@ -499,6 +499,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial1.println("OTA update is ON");
     return ;
   }
+  else if (callbackstring == "sendeventdescriptions=1")
+  {
+     SendEventDescriptions = 1;
+  }
+  else if (callbackstring == "sendeventdescriptions=0")
+  {
+    SendEventDescriptions = 0;
+  }
+  
   else if (callbackstring=="")
   {
     trc(F("No payload data"));
