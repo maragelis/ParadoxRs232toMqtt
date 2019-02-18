@@ -10,7 +10,9 @@ Alarm system serial to wemos through RX/TX<br>
   
 <br> Arduino IDE settings<br>
 
-Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 256 or higher<br>
+
+Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 256<br>
+
 Libs <br>
 wifimanager<br>
 pubsubclient<br>

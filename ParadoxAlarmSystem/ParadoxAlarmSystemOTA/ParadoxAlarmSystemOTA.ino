@@ -1024,6 +1024,7 @@ struct inPayload Decodejson(char *Payload){
     if (number1 < 10)
       number1 = number1 + 160;
 
+
     byte PanelPassword1 = number1 & 0xFF; 
     byte PanelPassword2 = number2 & 0xFF; 
     byte SubCommand = number3 & 0xFF;
