@@ -38,7 +38,7 @@
 
 //if 1 uses d13 d15 for rx/tx 0 uses default rx/tx
 //Default is to use onboard RX/TX 
-#define Serial_Swap 1 
+#define Serial_Swap 0
 
 #define Hassio 1 // 1 enables 0 disables Hassio-Openhab support
 #define HomeKit 0 // enables homekit topic
