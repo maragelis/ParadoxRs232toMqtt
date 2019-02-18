@@ -2,21 +2,22 @@
 
 This project uses a wemos esp8266 to read events of the serial bus of any Paradox alarm system and send it to Mqtt
 
-
-  Alarm system serial on wemos 
+Alarm system serial to wemos through RX/TX<br>
+  or <br>
   paradoxTX gpio15 wemos d8 
-  paradoxRX gpio13 wemos d7
-	
-  Debug messages can be read through usb on the wemos.<br> 
+  paradoxRX gpio13 wemos d7<br>
+  using serial_swap 1<br>
   
 <br> Arduino IDE settings<br>
 
+
 Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 256<br>
+
 Libs <br>
 wifimanager<br>
 pubsubclient<br>
 arduinojson<br>
-
+NTPtimeESP<br>
 
 Set Hassio flag to 1 for Home assistant see wiki (Home Assistant in V2)<br> 
 
@@ -41,17 +42,13 @@ paradoxdCTL/status       <- program messages
 
 paradoxdCTL/in           <- in topic 
 
-paradoxdCTL/status/Arm   <- Arm status message
-
-paradoxdCTL/status/Zone  <- Zone status messages
-
 <br>HomeAssistant mqtt topics<br>
 
-paradoxdCTL/out/zoneX where x is zone number from 1-32
+paradoxdCTL/hassio/Arm/zoneX where x is zone number from 1-32
 
-paradoxdCTL/out/zoneX gives values ON and OFF
+paradoxdCTL/hassio/Arm/zoneX gives values ON and OFF
 
-paradoxdCTL/out/state gives values:
+paradoxdCTL/hassio/Arm gives values:
 
 disarmed<br>
 armed_home<br>
@@ -79,8 +76,10 @@ Command can be one of the following
   stay,<br> 
   bypass,<br> 
   armstate,<br> 
-  zonestate,<br> 
   panelstatus <br> 
+  setdate <br> 
+  PGM_ON<br> 
+  PGM_OFF<br> 
 	
   
   subcomand depends on command ,<br> 
@@ -95,6 +94,12 @@ Command can be one of the following
   
 <br>
 <br> 
+
+
+20190212 Added retain message on hassio/Arm topic<br>
+	Added the ability to add credentials to mqtt.<br>
+	Added Homekit topic for Homebridge plugin. (comming soon). <br>	
+	
 
 20190130 added PGM support (command "PGM_ON" subcomand "0-31)
   
