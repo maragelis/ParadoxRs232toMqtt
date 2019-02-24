@@ -35,7 +35,9 @@
             "name": "Win32",
             "includePath": [
                 "C:\\Users\\marag\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
-                "C:\\Users\\marag\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.4.2\\**"
+                "C:\\Users\\marag\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.4.2\\**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
+                "${workspaceRoot}"
             ],
             "forcedInclude": []
         }
