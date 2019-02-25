@@ -2,18 +2,17 @@
 
 This project uses a wemos esp8266 to read events of the serial bus of any Paradox alarm system and send it to Mqtt
 
-
-  Alarm system serial to wemos through RX/TX<br>
+Alarm system serial to wemos through RX/TX<br>
   or <br>
   paradoxTX gpio15 wemos d8 
   paradoxRX gpio13 wemos d7<br>
   using serial_swap 1<br>
-         
-	 
-  
+
 <br> Arduino IDE settings<br>
 
-Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 256 or higher<br>
+
+Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 256<br>
+
 Libs <br>
 wifimanager<br>
 pubsubclient<br>
@@ -96,6 +95,11 @@ Command can be one of the following
 <br>
 <br> 
 
+
+20190212 Added retain message on hassio/Arm topic<br>
+	Added the ability to add credentials to mqtt.<br>
+	Added Homekit topic for Homebridge plugin. (comming soon). <br>	
+	
 
 20190130 added PGM support (command "PGM_ON" subcomand "0-31)
   
