@@ -7,7 +7,7 @@ Alarm system serial to wemos through RX/TX<br>
   paradoxTX gpio15 wemos d8 
   paradoxRX gpio13 wemos d7<br>
   using serial_swap 1<br>
-  
+
 <br> Arduino IDE settings<br>
 
 
