@@ -11,6 +11,7 @@
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
 
+
 #define firmware "PARADOX_2.2.4"
 
 #define mqtt_server       "192.168.2.100"
@@ -86,7 +87,6 @@ byte pindex = 0; // Index into array; where to store the character
 
 long lastReconnectAttempt = 0;
 long armStatusDelay =0;
-
 
 ESP8266WebServer HTTP(80);
 
@@ -684,10 +684,11 @@ void panelSetDate(){
 void ControlPanel(inPayload data){
   byte armdata[MessageLength] = {};
   byte checksum;
-  for (int i=0; i <= MessageLength;i++)
-  {
-    armdata[i]=0x00;
-  }
+  // for (int i=0; i <= MessageLength;i++)
+  // {
+  //   armdata[i]=0x00;
+  // }
+  memset(armdata, 0, sizeof(data));
 
   armdata[0] = 0x40;
   armdata[2] = data.Command;
@@ -726,6 +727,16 @@ void PanelDisconnect(){
   
 }
 
+void sendHAStatus(String topic , String value){
+  
+  char stsTopic[40];
+  String Topic = String(root_topicHassio) + "/" + topic ;
+  Topic.toCharArray(stsTopic, 40);
+
+  sendMQTT(stsTopic, value, true); 
+    
+}
+
 void PanelStatus0(){
   byte data[MessageLength] = {};
   byte checksum;
@@ -757,7 +768,18 @@ void PanelStatus0(){
     int PowerSupplyDCVoltageLevel =inData[16];
     int BatteryDCVoltageLevel=inData[17];
 
-    
+    if (Hassio)
+    {
+      sendHAStatus("Timer_Loss",String(Timer_Loss));
+      sendHAStatus("PowerTrouble",String(PowerTrouble));
+      sendHAStatus("ACFailureTrouble",String(ACFailureTroubleIndicator));
+      sendHAStatus("TelephoneLineTrouble",String(TelephoneLineTroubleIndicator));
+      sendHAStatus("PSUDCVoltage",String(PowerSupplyDCVoltageLevel));
+      sendHAStatus("BatteryDCVoltage",String(BatteryDCVoltageLevel));
+      sendHAStatus("BatteryTrouble",String(NoLowBatteryTroubleIndicator));
+    } 
+    else
+    {
         StaticJsonBuffer<256> jsonBuffer;
         JsonObject& root = jsonBuffer.createObject();
         root["Timer_Loss"]=String(Timer_Loss);
@@ -770,7 +792,8 @@ void PanelStatus0(){
         char output[256];
         root.printTo(output);
         sendCharMQTT(root_topicOut,output ,false);  
-    
+    }
+
     String Zonename ="";
     int zcnt = 0;
         
@@ -833,20 +856,34 @@ void PanelStatus1(){
   bool SleepFlg=bitRead(inData[17],1);
   bool ArmFlg=bitRead(inData[17],0);
 
-    StaticJsonBuffer<256> jsonBuffer;
-    char panelst[256];
-        JsonObject& panelstatus1 = jsonBuffer.createObject();
-        panelstatus1["Fire"]=Fire;
-        panelstatus1["Audible"]=Audible;
-        panelstatus1["Silent"]=Silent;
-        panelstatus1["AlarmFlg"]=AlarmFlg;
-        panelstatus1["StayFlg"]=StayFlg;
-        panelstatus1["SleepFlg"]=SleepFlg;
-        panelstatus1["ArmFlg"]=ArmFlg;
-        panelstatus1["zoneisbypassed"]=bool(bitRead(inData[18],3));
-            
-        panelstatus1.printTo(panelst);
-        sendCharMQTT(root_topicOut,panelst,false);  
+   if (Hassio)
+    {
+      sendHAStatus("Fire",String(Fire));
+      sendHAStatus("Audible",String(Audible));
+      sendHAStatus("Silent",String(Silent));
+      sendHAStatus("AlarmFlg",String(AlarmFlg));
+      sendHAStatus("StayFlg",String(StayFlg));
+      sendHAStatus("SleepFlg",String(SleepFlg));
+      sendHAStatus("ArmFlg",String(ArmFlg));
+    } else
+    {
+      
+      StaticJsonBuffer<256> jsonBuffer;
+      char panelst[256];
+          JsonObject& panelstatus1 = jsonBuffer.createObject();
+          panelstatus1["Fire"]=Fire;
+          panelstatus1["Audible"]=Audible;
+          panelstatus1["Silent"]=Silent;
+          panelstatus1["AlarmFlg"]=AlarmFlg;
+          panelstatus1["StayFlg"]=StayFlg;
+          panelstatus1["SleepFlg"]=SleepFlg;
+          panelstatus1["ArmFlg"]=ArmFlg;
+          panelstatus1["zoneisbypassed"]=bool(bitRead(inData[18],3));
+              
+          panelstatus1.printTo(panelst);
+          sendCharMQTT(root_topicOut,panelst,false);  
+    }
+
 
      if (AlarmFlg)
     {
@@ -915,12 +952,9 @@ void doLogin(byte pass1, byte pass2){
 
   trc(F("Running doLogin Function"));
 
- for (int i=0; i <= MessageLength;i++)
-  {
-    data[i]=0x00;
-    data1[i]=0x00;
-  }
-  //memset(data1, 0, sizeof(data1));
+  
+  memset(data1, 0, sizeof(data1));
+  memset(data, 0, sizeof(data));
 
   
   data[0] = 0x5f;
