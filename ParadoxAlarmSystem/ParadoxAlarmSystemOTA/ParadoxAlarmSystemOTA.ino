@@ -11,12 +11,12 @@
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
 
-#define firmware "PARADOX_2.2.3"
+#define firmware "PARADOX_2.2.4"
 
-#define mqtt_server       "192.168.2.230"
+#define mqtt_server       "192.168.2.100"
 #define mqtt_port         "1883"
-#define mqtt_user         ""
-#define mqtt_password     "" 
+char mqtt_username[40]="";
+char mqtt_password[40]=""; 
 
 #define Hostname          "paradoxdCTL" //not more than 15
 
@@ -1051,6 +1051,8 @@ void setup_wifi(){
   
     WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
     WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 6);
+    WiFiManagerParameter custom_mqtt_username("username", "mqtt username", mqtt_username, 40);
+    WiFiManagerParameter custom_mqtt_password("password", "mqtt password", mqtt_password, 40);
 
     WiFiManager wifiManager;
     if (ResetConfig)
@@ -1079,6 +1081,8 @@ void setup_wifi(){
     
     wifiManager.addParameter(&custom_mqtt_server);
     wifiManager.addParameter(&custom_mqtt_port);
+    wifiManager.addParameter(&custom_mqtt_username);
+    wifiManager.addParameter(&custom_mqtt_password);
         
     if (!wifiManager.autoConnect(Hostname, "")) {
       trc(F("failed to connect and hit timeout"));
@@ -1092,6 +1096,8 @@ void setup_wifi(){
   
     strcpy(mqtt_server, custom_mqtt_server.getValue());
     strcpy(mqtt_port, custom_mqtt_port.getValue());
+    strcpy(mqtt_username, custom_mqtt_username.getValue());
+    strcpy(mqtt_password, custom_mqtt_password.getValue());
     
     //save the custom parameters to FS
     if (shouldSaveConfig) {
@@ -1100,6 +1106,8 @@ void setup_wifi(){
       JsonObject& json = jsonBuffer.createObject();
       json["mqtt_server"] = mqtt_server;
       json["mqtt_port"] = mqtt_port;
+      json["mqtt_username"] = mqtt_username;
+      json["mqtt_password"] = mqtt_password;
       
       File configFile = SPIFFS.open("/config.json", "w");
       if (!configFile) {
@@ -1141,7 +1149,7 @@ boolean reconnect() {
     char charBuf[50];
     mqname.toCharArray(charBuf, 50) ;
 
-    if (client.connect(charBuf,mqtt_user,mqtt_password,root_topicStatus,0,false,"{\"status\":\"Paradox Disconnected\"}")) {
+    if (client.connect(charBuf,mqtt_username,mqtt_password,root_topicStatus,0,false,"{\"status\":\"Paradox Disconnected\"}")) {
     // Once connected, publish an announcement...
       //client.publish(root_topicOut,"connected");
       trc("MQTT connected");
@@ -1211,6 +1219,8 @@ void mountfs(){
 
           strcpy(mqtt_server, json["mqtt_server"]);
           strcpy(mqtt_port, json["mqtt_port"]);
+          strcpy(mqtt_username, json["mqtt_username"]);
+          strcpy(mqtt_password, json["mqtt_password"]);
           
         } else {
           trc(F("failed to load json config"));
