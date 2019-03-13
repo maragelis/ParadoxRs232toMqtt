@@ -13,10 +13,10 @@ Alarm system serial to wemos through RX/TX<br>
 
 Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 256<br>
 
-Libs <br>
-wifimanager<br>
-pubsubclient<br>
-arduinojson<br>
+Libraries:<br>
+Arduino core 2.4.1<br>
+WifiManager by tzapu 0.12.0<br>
+PubSubClient by Nick O`Leary 2.6.0<br>
 NTPtimeESP<br>
 
 Set Hassio flag to 1 for Home assistant see wiki (Home Assistant in V2)<br> 
