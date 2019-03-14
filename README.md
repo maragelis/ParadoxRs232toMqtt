@@ -17,7 +17,7 @@ Libraries:<br>
 Arduino core 2.4.1<br>
 WifiManager by tzapu 0.12.0<br>
 PubSubClient by Nick O`Leary 2.6.0<br>
-NTPtimeESP<br>
+
 
 Set Hassio flag to 1 for Home assistant see wiki (Home Assistant in V2)<br> 
 
