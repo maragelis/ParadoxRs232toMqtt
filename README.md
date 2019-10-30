@@ -1,118 +1,98 @@
 # ParadoxRs232toMqtt
 
-This project uses a wemos esp8266 to read events of the serial bus of any Paradox alarm system and send it to Mqtt
+This project uses a WEMOS ESP8266 to read the events of the serial bus on Paradox alarm systems and send them to an MQTT server
 
-Alarm system serial to wemos through RX/TX<br>
-  or <br>
-  paradoxTX gpio15 wemos d8 
-  paradoxRX gpio13 wemos d7<br>
-  using serial_swap 1<br>
+## Making a connection
 
-<br> Arduino IDE settings<br>
+There are 2 ways to connect the devices together:
+- Alarm system serial to WEMOS through RX/TX<br>
+- paradoxTX into GPIO15 (WEMOS D8), paradoxRX to GPIO13 (WEMOS D7), using serial_swap 1
 
+## Arduino IDE settings
 
-Edit the PubSubClient.h header file and change MQTT_MAX_PACKET_SIZE to 256<br>
+Edit the _PubSubClient.h_ header file and change _MQTT_MAX_PACKET_SIZE_ to _256_
 
-Libraries:<br>
-Arduino core 2.4.1<br>
-WifiManager by tzapu 0.12.0<br>
-PubSubClient by Nick O`Leary 2.6.0<br>
+Libraries:
+- Arduino Core 2.4.1
+- WifiManager by tzapu 0.12.0
+- PubSubClient by Nick O`Leary 2.6.0
 
-Set Hassio flag to 1 for Home assistant see wiki (Home Assistant in V2)<br> 
-
+Set the _Hassio_ flag to _1_ for Home assistant, and check out the wiki (Home Assistant in V2)
         
-        
-The 37 byte message is broken down into a json message with "Event Group" and "Sub-group" 
+The 37 byte message is broken down into a json message with "Event Group" and "Sub-group", and one more dummy attribute which is the zone/partition label.
 
-and one more dummy attribute which is the zone/partition label.<br> 
+See the wiki for more info on Groups and Sub-groups
 
+After flashing the WEMOS board, connect to it's Wi-Fi (_paradoxdCTL_), open the 192.168.4.1 IP address in your browser, input your Wi-Fi credentials and MQTT server address. That's all.  
 
+### MQTT Topics 
 
-See wiki for more info on Groups and sub groups <br> 
+| Topic              | Notes                     |
+|--------------------|---------------------------|
+| paradoxdCTL/out    | All alarm event messages  |
+| paradoxdCTL/status | The program messages      |
+| paradoxdCTL/in     | Input topic               |
 
-After flashing the wemos connect to its wifi, (paradoxdCTL), go to page 192.168.4.1 give it your wifi credentials and MQtt server address. Thats it  
-<br> 
+### HomeAssistant MQTT Topics
 
-Mqtt topics 
+| Topic                        | Notes                                                     |
+|------------------------------|-----------------------------------------------------------|
+| paradoxdCTL/hassio/Arm/zoneX | Where x is zone number from 1-32                          |
+| paradoxdCTL/hassio/Arm/zoneX | Gives values ON/OFF                                       |
+| paradoxdCTL/hassio/Arm       | Gives values: disarmed, armed_home, armed_away, triggered |
 
-paradoxdCTL/out           <- all alarm event messages
+### Sending commands
 
-paradoxdCTL/status       <- program messages
-
-paradoxdCTL/in           <- in topic 
-
-<br>HomeAssistant mqtt topics<br>
-
-paradoxdCTL/hassio/Arm/zoneX where x is zone number from 1-32
-
-paradoxdCTL/hassio/Arm/zoneX gives values ON and OFF
-
-paradoxdCTL/hassio/Arm gives values:
-
-disarmed<br>
-armed_home<br>
-armed_away<br>
-triggered<br>
-<br> 
-
-json Command payload template <br>
+The command payloads are in JSON. Template:
+```json
 {
  "password":"1234",
  "Command":"arm",
  "Subcommand":"0"
 }
+```
+The password is the user's 4 digit password.
 
-<br> 
-
-password is user 4 digit password
-
-Command can be one of the following 
-
-
-  arm,<br> 
-  disarm,<br> 
-  sleep,<br> 
-  stay,<br> 
-  bypass,<br> 
-  armstate,<br> 
-  panelstatus <br> 
-  setdate <br> 
-  PGM_ON<br> 
-  PGM_OFF<br> 
+A command can be any of the following:
+- arm
+- disarm
+- sleep
+- stay
+- bypass
+- armstate
+- panelstatus
+- setdate
+- PGM_ON
+- PGM_OFF
 	
-  
-  subcomand depends on command ,<br> 
+#### Subcommands depending on the main command
 	
-  if Command is arm,sleep,disarm subcomand is partition<br> 
+| Main Command     | Subcommand                     |
+|------------------|--------------------------------|
+| arm,sleep,disarm | partition                      |
+| bypass           | The zone number from 0 to 31   |
+| panelstatus      | panel data                     |
+| panelstatus      | panel voltage and battery data |
+
+### Release Logs
+
+20190212:
+- Added retain message on hassio/Arm topic<br>
+- Added the ability to add credentials to mqtt.<br>
+- Added Homekit topic for Homebridge plugin. (comming soon). <br>	
 	
-  if Command is bypass subcomand is zone number from 0 to 31 <br> 
+20190130: added PGM support (command "PGM_ON" subcomand "0-31)
   
-  if Command is panelstatus subcomand 0 = panel data <br> 
-  		or subcomand 1 = panel voltage and battery data <br> 	
- 
-  
-<br>
-<br> 
+20190114: V2 Live (Homeassistant)
 
+20190104: Added wiki Node-red v2 flow 
 
-20190212 Added retain message on hassio/Arm topic<br>
-	Added the ability to add credentials to mqtt.<br>
-	Added Homekit topic for Homebridge plugin. (comming soon). <br>	
-	
+20190103: Added v2 test branch (stable working) 
 
-20190130 added PGM support (command "PGM_ON" subcomand "0-31)
-  
-20190114 V2 Live (Homeassistant)
+20180804: Wiki added Home Assistant Config (works with node-red) 
 
-20190104 Added wiki Node-red v2 flow 
-
-20190103 Added v2 test branch (stable working) 
-
-20180804 Wiki added Home Assistant Config (works with node-red) 
-
-20180721 Changed to user based password, use the same 4 digit code used on panel for control. 
+20180721: Changed to user based password, use the same 4 digit code used on panel for control. 
 
 
 
-Continue reading wiki ....
-
+Continue reading the wiki for more information.
