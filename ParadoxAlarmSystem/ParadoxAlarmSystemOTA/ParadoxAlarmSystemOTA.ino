@@ -42,6 +42,7 @@
 #define Hassio 1 // 1 enables 0 disables Hassio-Openhab support
 #define HomeKit 0 // enables homekit topic
 #define SendAllE0events 1 //If you need all events set to 1 else 0 
+#define usePartitions 1
 
 //If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems.
 //Can also be enabled by sending sendeventdescriptions=1 to in topic.
@@ -102,6 +103,7 @@ struct inPayload
  typedef struct {
      int intArmStatus;
      String stringArmStatus;
+     int Partition;
      int sent;
  } paradoxArm;
 
@@ -215,16 +217,19 @@ void StartSSDP(){
   }
 }
 
-void updateArmStatus(byte event, byte sub_event){
+void updateArmStatus(byte event, byte sub_event, byte partition){
   bool datachanged = false;
+  homekitStatus.Partition = hassioStatus.Partition = partition;
   if (event == 2)
   {
+    
     switch (sub_event)
     {
       case 4:
         hassioStatus.stringArmStatus = "triggered";
         homekitStatus.stringArmStatus = "ALARM_TRIGGERED";
         homekitStatus.intArmStatus=4;
+        
         datachanged=true;
         
       break;
@@ -276,6 +281,11 @@ void sendArmStatus(){
   JsonObject& root = jsonBuffer.createObject();
         if (Hassio)
         {
+          String sTopic  = root_topicHassioArm;
+          if(usePartitions)
+           {
+              sTopic = root_topicHassioArm + hassioStatus.Partition;
+           }
           sendMQTT(root_topicHassioArm,hassioStatus.stringArmStatus, true);  
         }
         if (HomeKit)
@@ -288,10 +298,10 @@ void sendArmStatus(){
 }
 
 
-void processMessage( byte event, byte sub_event, String dummy ){
+void processMessage( byte event, byte sub_event, byte partition , String dummy ){
   if ((Hassio || HomeKit) && (event == 2 || event == 6))
   {
-    updateArmStatus(event,sub_event); 
+    updateArmStatus(event,sub_event, partition); 
   }
 
   //Dont send the arm event now send it on next message, because it might be updated to sleep or stay.
@@ -339,6 +349,7 @@ void processMessage( byte event, byte sub_event, String dummy ){
     JsonObject& root = jsonBuffer.createObject();
     root["event"]=event;
     root["sub_event"]=sub_event;
+    root["partition"]=partition;
     if (SendEventDescriptions)
     {
       root["sub_eventD"]=getSubEvent(event,sub_event);
@@ -354,7 +365,7 @@ void processMessage( byte event, byte sub_event, String dummy ){
 
 void sendMQTT(String topicNameSend, String dataStr,bool  retain){
     handleMqttKeepAlive();
-    char topicStrSend[40];
+    char topicStrSend[100];
     topicNameSend.toCharArray(topicStrSend,26);
     char dataStrSend[200];
     dataStr.toCharArray(dataStrSend,200);
@@ -435,7 +446,7 @@ void answer_E0(){
     zlabel.trim();
   }
   
-  processMessage( inData[7], inData[8], zlabel);
+  processMessage( inData[7], inData[8], inData[9], zlabel);
   if (inData[7] == 48 && inData[8] == 3)
   {
     PanelConnected = false;

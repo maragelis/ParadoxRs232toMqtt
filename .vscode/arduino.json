@@ -3,5 +3,6 @@
     "configuration": "CpuFrequency=80,UploadSpeed=921600,FlashSize=4M1M",
     "sketch": "ParadoxAlarmSystem/ParadoxAlarmSystemOTA/ParadoxAlarmSystemOTA.ino",
     "port": "COM5",
-    "output": "../ArduinoOutput"
+    "output": "../ArduinoOutput",
+    "programmer": "ArduinoISP"
 }
