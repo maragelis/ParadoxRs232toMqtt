@@ -76,6 +76,10 @@ A command can be any of the following:
 
 ### Release Logs
 
+20200126: 
+1. Added ArmStatus: pending when exit delay 
+2. Added Event 29 (because of change pending status to arm_away after exit delay) 
+
 20190212:
 - Added retain message on hassio/Arm topic<br>
 - Added the ability to add credentials to mqtt.<br>
