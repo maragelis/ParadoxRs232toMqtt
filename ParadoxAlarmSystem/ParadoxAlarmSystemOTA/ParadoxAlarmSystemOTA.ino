@@ -286,7 +286,7 @@ void sendArmStatus(){
            {
               sTopic = root_topicHassioArm + hassioStatus.Partition;
            }
-          sendMQTT(root_topicHassioArm,hassioStatus.stringArmStatus, true);  
+          sendMQTT(sTopic,hassioStatus.stringArmStatus, true);  
         }
         if (HomeKit)
         {
