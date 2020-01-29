@@ -244,7 +244,14 @@ void updateArmStatus(byte event, byte sub_event){
          
          datachanged=true;
         break;
-
+            
+       case 14:
+         hassioStatus.stringArmStatus = "pending";
+         //homekitStatus.stringArmStatus = "PENDING";
+         homekitStatus.intArmStatus = 1;
+         
+         datachanged=true;
+        break;
       default : break;
     }
   }
@@ -303,7 +310,12 @@ void processMessage( byte event, byte sub_event, String dummy ){
       homekitStatus.sent = homekitStatus.intArmStatus;
       }
   }
-
+ 
+  if ((Hassio || HomeKit) && (event == 29))
+  {
+      sendArmStatus();
+      homekitStatus.sent = homekitStatus.intArmStatus;
+  }
  
   if ((Hassio ) && (event == 1 || event == 0))
   {
