@@ -42,7 +42,7 @@
 #define Hassio 1 // 1 enables 0 disables Hassio-Openhab support
 #define HomeKit 0 // enables homekit topic
 #define SendAllE0events 1 //If you need all events set to 1 else 0 
-#define usePartitions 1
+#define usePartitions 1 //If you use partitions enable this to get partition number in Hassio topic 
 
 //If you need event decriptions set to 1 else 0 Can cause slow downs on heavy systems.
 //Can also be enabled by sending sendeventdescriptions=1 to in topic.
@@ -219,7 +219,8 @@ void StartSSDP(){
 
 void updateArmStatus(byte event, byte sub_event, byte partition){
   bool datachanged = false;
-  homekitStatus.Partition = hassioStatus.Partition = partition;
+  homekitStatus.Partition  = partition;
+  hassioStatus.Partition = partition;
   if (event == 2)
   {
     
@@ -282,9 +283,9 @@ void sendArmStatus(){
         if (Hassio)
         {
           String sTopic  = root_topicHassioArm;
-          if(usePartitions)
+          if (usePartitions)
            {
-              sTopic = root_topicHassioArm + hassioStatus.Partition;
+              sTopic = String(root_topicHassioArm) + String(hassioStatus.Partition);
            }
           sendMQTT(sTopic,hassioStatus.stringArmStatus, true);  
         }

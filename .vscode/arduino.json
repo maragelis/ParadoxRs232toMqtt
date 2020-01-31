@@ -4,5 +4,5 @@
     "sketch": "ParadoxAlarmSystem/ParadoxAlarmSystemOTA/ParadoxAlarmSystemOTA.ino",
     "port": "COM5",
     "output": "../ArduinoOutput",
-    "programmer": "ArduinoISP"
+    "programmer": "AVR ISP"
 }
