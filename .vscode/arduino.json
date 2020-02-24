@@ -2,7 +2,7 @@
     "board": "esp8266:esp8266:d1_mini",
     "configuration": "CpuFrequency=80,UploadSpeed=921600,FlashSize=4M1M",
     "sketch": "ParadoxAlarmSystem/ParadoxAlarmSystemOTA/ParadoxAlarmSystemOTA.ino",
-    "port": "COM5",
+    "port": "COM7",
     "output": "../ArduinoOutput",
     "programmer": "AVR ISP"
 }

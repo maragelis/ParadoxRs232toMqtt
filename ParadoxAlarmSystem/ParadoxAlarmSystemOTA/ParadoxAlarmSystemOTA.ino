@@ -125,7 +125,7 @@ void setup() {
     Serial.swap();
   }
 
-  Serial1.begin(115200);
+  Serial1.begin(9600);
   Serial1.flush();
   Serial1.setDebugOutput(true);
   trc(F("serial monitor is up"));
@@ -1064,6 +1064,9 @@ void setup_wifi(){
     WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
     WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 6);
 
+     WiFiManagerParameter custom_MqttUserName("Username", "mqtt Username", mqtt_user, 40);
+     WiFiManagerParameter custom_MqttUserPassword("Password", "mqtt Password", mqtt_password, 40);
+
     WiFiManager wifiManager;
     if (ResetConfig)
     {
@@ -1091,6 +1094,9 @@ void setup_wifi(){
     
     wifiManager.addParameter(&custom_mqtt_server);
     wifiManager.addParameter(&custom_mqtt_port);
+     wifiManager.addParameter(&custom_MqttUserName);
+      wifiManager.addParameter(&custom_MqttUserPassword);
+
         
     if (!wifiManager.autoConnect(Hostname, "")) {
       trc(F("failed to connect and hit timeout"));
@@ -1104,6 +1110,9 @@ void setup_wifi(){
   
     strcpy(mqtt_server, custom_mqtt_server.getValue());
     strcpy(mqtt_port, custom_mqtt_port.getValue());
+
+    strcpy(mqtt_user, custom_MqttUserName.getValue());
+    strcpy(mqtt_password, custom_MqttUserPassword.getValue());
     
     //save the custom parameters to FS
     if (shouldSaveConfig) {
@@ -1112,6 +1121,8 @@ void setup_wifi(){
       JsonObject& json = jsonBuffer.createObject();
       json["mqtt_server"] = mqtt_server;
       json["mqtt_port"] = mqtt_port;
+      json["mqtt_user"] = mqtt_user;
+      json["mqtt_password"] = mqtt_password;
       
       File configFile = SPIFFS.open("/config.json", "w");
       if (!configFile) {
