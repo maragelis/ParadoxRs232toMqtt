@@ -13,7 +13,7 @@
 
 #define firmware "PARADOX_2.2.3"
 
-#define mqtt_server       "192.168.2.230"
+#define mqtt_server       "192.168.0.100"
 #define mqtt_port         "1883"
 #define mqtt_user         ""
 #define mqtt_password     "" 
@@ -1234,6 +1234,8 @@ void mountfs(){
 
           strcpy(mqtt_server, json["mqtt_server"]);
           strcpy(mqtt_port, json["mqtt_port"]);
+          strcpy(mqtt_user, json["mqtt_user"]);
+          strcpy(mqtt_password, json["mqtt_password"]);
           
         } else {
           trc(F("failed to load json config"));
