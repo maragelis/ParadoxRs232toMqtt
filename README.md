@@ -1,3 +1,5 @@
+# Moved to updated  https://github.com/maragelis/ParadoxMqtt32
+
 # ParadoxRs232toMqtt
 
 This project uses a WEMOS ESP8266 to read the events of the serial bus on Paradox alarm systems and send them to an MQTT server
