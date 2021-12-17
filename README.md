@@ -1,4 +1,3 @@
-# Moved to updated  https://github.com/maragelis/ParadoxMqtt32
 
 # ParadoxRs232toMqtt
 
