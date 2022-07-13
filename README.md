@@ -1,3 +1,4 @@
+Anyone intrested in a esp32 version running micropython check here https://github.com/maragelis/micropython_paradox
 
 # ParadoxRs232toMqtt
 
